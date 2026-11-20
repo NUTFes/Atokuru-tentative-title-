@@ -159,7 +159,7 @@ DB の接続情報などの秘密情報は `.env` に書き、Git には上げ�
 ## 開発の進め方
 
 1. [Issues](https://github.com/NUTFes/Atokuru-tentative-title-/issues) から担当の Issue を選びます。タイトルの番号が、やる順番です。
-2. Issue ごとに `feature/<Issue番号>-<内容>` の名前でブランチを切ります（例：`feature/19-get-ticket`）。
+2. Issue ごとに `種類/名前/Issue番号/内容` の名前でブランチを切ります（例：`feat/goldfish/19/get-ticket`）。種類は `feat`・`fix`・`docs` のどれかです。詳しくは [AGENTS.md](AGENTS.md) を見てください。
 3. Issue のチェックボックスを埋めながら開発します。
 4. 全部終わったら PR を出し、説明に `close #<Issue番号>` を書きます。
 5. 1人にレビューしてもらってから main にマージします。main には直接 push しません。

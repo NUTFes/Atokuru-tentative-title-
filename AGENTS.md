@@ -92,6 +92,10 @@ frontend/public/          マップの画像、manifest.json、sw.js
 ## Git の運用
 
 - **main に直接 push しない**：Issue ごとにブランチを切り、PR を出して1人に見てもらってからマージします
-- ブランチ名：`feature/<Issue番号>-<内容>`（例：`feature/19-get-ticket`）
+- ブランチ名は、SeeFT と同じく `種類/名前/Issue番号/内容` にします
+  - 種類は `feat`（機能）・`fix`（修正）・`docs`（文書）のどれかです
+  - 名前は自分の GitHub のユーザー名などです
+  - 内容は英語の小文字で、単語を `-` でつなぎます
+  - 例：`feat/goldfish/19/get-ticket`、`fix/ryotaka/23/ticket-list-layout`、`docs/amane/29/ja-json`
 - PR の説明に `close #<Issue番号>` を書いて、Issue と紐づけます
 - コミットメッセージは日本語で、何をしたかが分かるように書きます
