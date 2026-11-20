@@ -1,0 +1,16 @@
+# ローカル開発用。リポジトリのルートで `docker compose up` すると起動する。
+#   frontend：http://localhost:3000
+# バックエンドは #7 で追加する。
+services:
+  frontend:
+    build:
+      context: ./frontend
+      target: dev
+    ports:
+      - "3000:3000"
+    volumes:
+      # ソースをコンテナと共有して、保存したら画面に反映されるようにする
+      - ./frontend:/app
+      # node_modules と .next はコンテナの中のものを使う（ホストの OS 用のものと混ざらないように）
+      - /app/node_modules
+      - /app/.next
