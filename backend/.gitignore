@@ -4,3 +4,9 @@
 # go build の出力
 /server
 /bin/
+
+# 手元で試すときの SQLite ファイル
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
