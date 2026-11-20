@@ -62,8 +62,8 @@
 
 | 言語・フレームワーク | バージョン |
 | -------------------- | ---------- |
-| Go                   | 未記入     |
-| Echo                 | 未記入     |
+| Go                   | 1.26       |
+| Echo                 | v4.16      |
 | Node.js              | 未記入     |
 | Next.js              | 未記入     |
 | React                | 未記入     |
@@ -150,9 +150,10 @@ DB の接続情報などの秘密情報は `.env` に書き、Git には上げ�
 
 ### コマンド一覧
 
-| コマンド | 実行する処理 |
+| コマンド（`backend/` で実行） | 実行する処理 |
 | -------- | ------------ |
-|          |              |
+| `go run ./cmd/server` | API サーバーを起動する（ポートは環境変数 `PORT`、なければ 8080）。`http://localhost:8080/api/health` で `{"status":"ok"}` が返れば OK |
+| `go generate ./...` | `openapi/openapi.yaml` から `internal/gen/api.gen.go` を生成し直す |
 
 <p align="right">(<a href="#top">トップへ</a>)</p>
 

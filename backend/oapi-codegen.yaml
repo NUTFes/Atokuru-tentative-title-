@@ -1,0 +1,9 @@
+# openapi/openapi.yaml から internal/gen/api.gen.go を生成するための設定
+# 生成するコマンド：backend/ で `go generate ./...`
+package: gen
+output: api.gen.go  # go generate は internal/gen/ で実行されるので、そこからの相対パス
+generate:
+  models: true
+  echo-server: true
+  strict-server: true
+  embedded-spec: true

@@ -1,0 +1,31 @@
+openapi: 3.0.3
+info:
+  title: アトクル API
+  version: 0.1.0
+  description: 学園祭の模擬店の整理券を管理する API。各 API は #5 で追加する。
+# API はすべて /api の下に置く。それ以外の URL は Echo が FE の静的ファイルを返す。
+servers:
+  - url: /api
+paths:
+  /health:
+    get:
+      operationId: getHealth
+      summary: サーバーが動いているかを確認する
+      tags: [health]
+      responses:
+        "200":
+          description: 動いている
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Health"
+components:
+  schemas:
+    Health:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [ok]
+          example: ok

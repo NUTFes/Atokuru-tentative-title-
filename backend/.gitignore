@@ -1,0 +1,6 @@
+# 秘密情報
+.env
+
+# go build の出力
+/server
+/bin/
