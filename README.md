@@ -144,7 +144,11 @@
 
 | 変数名 | 役割 | デフォルト値 | DEV 環境での値 |
 | ------ | ---- | ------------ | -------------- |
-|        |      |              |                |
+| `TURSO_DATABASE_URL` | DB の URL（`libsql://...`、手元で試すときは `file:local.db`） | なし | Turso の DB の URL |
+| `TURSO_AUTH_TOKEN` | Turso の接続トークン（`file:` のときは空） | なし | `turso db tokens create` で発行したもの |
+| `PORT` | API サーバーのポート | `8080` | `8080` |
+
+`backend/.env.example` を `backend/.env` にコピーして値を埋めてください。
 
 DB の接続情報などの秘密情報は `.env` に書き、Git には上げないでください。
 
