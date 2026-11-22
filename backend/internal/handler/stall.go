@@ -9,7 +9,15 @@ import (
 
 // ListStalls は GET /stalls（マップ用の一覧）。
 func (h *Handler) ListStalls(ctx context.Context, _ gen.ListStallsRequestObject) (gen.ListStallsResponseObject, error) {
-	return nil, errNotImplemented
+	stalls, err := h.stalls.List(ctx)
+	if err != nil {
+		return nil, err
+	}
+	res := make(gen.ListStalls200JSONResponse, 0, len(stalls))
+	for _, s := range stalls {
+		res = append(res, toStallSummary(s))
+	}
+	return res, nil
 }
 
 // GetStall は GET /stalls/{stallId}。

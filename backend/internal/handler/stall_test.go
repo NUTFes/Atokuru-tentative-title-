@@ -115,3 +115,68 @@ func TestUpdateBusinessStatus_Errors(t *testing.T) {
 		}
 	}
 }
+
+func TestListStalls(t *testing.T) {
+	e, gdb := newTestServer(t)
+	// 店番号の順に並ぶことを確かめるため、わざと逆の順に作る
+	busy := createStall(t, gdb, "B-01", domain.BusinessStatusOpen)
+	closed := createStall(t, gdb, "A-02", domain.BusinessStatusClosed)
+	empty := createStall(t, gdb, "A-01", domain.BusinessStatusOpen)
+	empty.HPLink = nil
+	if err := gdb.Model(empty).Update("hp_link", nil).Error; err != nil {
+		t.Fatal(err)
+	}
+
+	// busy に12枚発行し、うち2枚を ready にする → waiting は10枚
+	for i := 0; i < 12; i++ {
+		tk := issueTicket(t, e, busy.ID, `{}`)
+		if i < 2 {
+			doRequest(e, http.MethodPatch, "/api/tickets/"+itoa(uint(tk.Id))+"/status", `{"status":"ready"}`)
+		}
+	}
+	// closed には営業中のときに3枚発行してから閉店にする
+	if err := gdb.Model(closed).Update("business_status", domain.BusinessStatusOpen).Error; err != nil {
+		t.Fatal(err)
+	}
+	for i := 0; i < 3; i++ {
+		issueTicket(t, e, closed.ID, `{}`)
+	}
+	doRequest(e, http.MethodPatch, "/api/stalls/"+itoa(closed.ID)+"/business-status", `{"business_status":"closed"}`)
+
+	rec := doRequest(e, http.MethodGet, "/api/stalls", "")
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, body = %s", rec.Code, rec.Body)
+	}
+	got := decode[[]gen.StallSummary](t, rec.Body.Bytes())
+	if len(got) != 3 {
+		t.Fatalf("got %d stalls: %s", len(got), rec.Body)
+	}
+
+	want := []struct {
+		number     string
+		waiting    int
+		congestion gen.Congestion
+		hpLink     bool
+	}{
+		{"A-01", 0, gen.Green, false},
+		{"A-02", 3, gen.Gray, true},
+		{"B-01", 10, gen.Red, true},
+	}
+	for i, w := range want {
+		g := got[i]
+		if g.StallNumber != w.number || g.WaitingCount != w.waiting || g.Congestion != w.congestion || (g.HpLink != nil) != w.hpLink {
+			t.Errorf("%d 番目: got %+v, want %+v", i, g, w)
+		}
+	}
+	if strings.Contains(rec.Body.String(), "password") {
+		t.Errorf("パスワードが返っています: %s", rec.Body)
+	}
+}
+
+func TestListStalls_Empty(t *testing.T) {
+	e, _ := newTestServer(t)
+	rec := doRequest(e, http.MethodGet, "/api/stalls", "")
+	if rec.Code != http.StatusOK || strings.TrimSpace(rec.Body.String()) != "[]" {
+		t.Errorf("status = %d, body = %s", rec.Code, rec.Body)
+	}
+}

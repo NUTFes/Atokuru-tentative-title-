@@ -20,6 +20,18 @@ func toStall(s *domain.Stall) gen.Stall {
 	}
 }
 
+func toStallSummary(s usecase.StallSummary) gen.StallSummary {
+	return gen.StallSummary{
+		Id:             int64(s.Stall.ID),
+		Name:           s.Stall.Name,
+		StallNumber:    s.Stall.StallNumber,
+		HpLink:         s.Stall.HPLink,
+		BusinessStatus: gen.BusinessStatus(s.Stall.BusinessStatus),
+		WaitingCount:   s.WaitingCount,
+		Congestion:     gen.Congestion(s.Congestion),
+	}
+}
+
 func toTicket(t *domain.Ticket) gen.Ticket {
 	return gen.Ticket{
 		Id:          int64(t.ID),
