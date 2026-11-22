@@ -42,6 +42,14 @@ func doRequest(e *echo.Echo, method, path, body string) *httptest.ResponseRecord
 	if body != "" {
 		req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
 	}
+	return serve(e, req)
+}
+
+func newRequest(method, path string) *http.Request {
+	return httptest.NewRequest(method, path, nil)
+}
+
+func serve(e *echo.Echo, req *http.Request) *httptest.ResponseRecorder {
 	rec := httptest.NewRecorder()
 	e.ServeHTTP(rec, req)
 	return rec
