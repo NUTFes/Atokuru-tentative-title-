@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
@@ -253,6 +254,66 @@ func TestListStallTickets_Errors(t *testing.T) {
 		rec := doRequest(e, http.MethodGet, tt.path, "")
 		if rec.Code != tt.want || !strings.Contains(rec.Body.String(), `"code":"`+tt.wantCode+`"`) {
 			t.Errorf("%s: status = %d, body = %s", tt.path, rec.Code, rec.Body)
+		}
+	}
+}
+
+func TestUpdateTicketStatus(t *testing.T) {
+	e, gdb := newTestServer(t)
+	s := createStall(t, gdb, "A-01", domain.BusinessStatusOpen)
+	tk := issueTicket(t, e, s.ID, `{}`)
+	path := "/api/tickets/" + strconv.FormatInt(tk.Id, 10) + "/status"
+
+	patch := func(status string) gen.Ticket {
+		t.Helper()
+		rec := doRequest(e, http.MethodPatch, path, `{"status":"`+status+`"}`)
+		if rec.Code != http.StatusOK {
+			t.Fatalf("%s: status = %d, body = %s", status, rec.Code, rec.Body)
+		}
+		return decode[gen.Ticket](t, rec.Body.Bytes())
+	}
+
+	ready := patch("ready")
+	if ready.Status != gen.Ready || ready.CalledAt == nil {
+		t.Fatalf("ready にしたら called_at が入るはず: %+v", ready)
+	}
+	// 同じ status をもう一度送っても called_at は変わらない
+	if again := patch("ready"); again.CalledAt == nil || !again.CalledAt.Equal(*ready.CalledAt) {
+		t.Errorf("ready を2回押したら called_at が変わった: %v → %v", ready.CalledAt, again.CalledAt)
+	}
+	// 受け取り済みにしても called_at は残る
+	if received := patch("received"); received.Status != gen.Received || received.CalledAt == nil {
+		t.Errorf("received: %+v", received)
+	}
+	// 押し間違いを戻せる。waiting に戻したら called_at は空になる
+	if back := patch("waiting"); back.Status != gen.Waiting || back.CalledAt != nil {
+		t.Errorf("waiting に戻したとき: %+v", back)
+	}
+	// waiting から直接 received にもできる（called_at は空のまま）
+	if direct := patch("received"); direct.Status != gen.Received || direct.CalledAt != nil {
+		t.Errorf("waiting → received: %+v", direct)
+	}
+}
+
+func TestUpdateTicketStatus_Errors(t *testing.T) {
+	e, gdb := newTestServer(t)
+	s := createStall(t, gdb, "A-01", domain.BusinessStatusOpen)
+	tk := issueTicket(t, e, s.ID, `{}`)
+	path := "/api/tickets/" + strconv.FormatInt(tk.Id, 10) + "/status"
+
+	tests := []struct {
+		path, body string
+		want       int
+		wantCode   string
+	}{
+		{path, `{"status":"cooking"}`, http.StatusBadRequest, "bad_request"},
+		{path, `{}`, http.StatusBadRequest, "bad_request"},
+		{"/api/tickets/999/status", `{"status":"ready"}`, http.StatusNotFound, "not_found"},
+	}
+	for _, tt := range tests {
+		rec := doRequest(e, http.MethodPatch, tt.path, tt.body)
+		if rec.Code != tt.want || !strings.Contains(rec.Body.String(), `"code":"`+tt.wantCode+`"`) {
+			t.Errorf("%s %s: status = %d, body = %s", tt.path, tt.body, rec.Code, rec.Body)
 		}
 	}
 }
