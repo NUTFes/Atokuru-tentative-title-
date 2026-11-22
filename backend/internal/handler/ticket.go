@@ -3,12 +3,30 @@ package handler
 import (
 	"context"
 
+	"github.com/NUTFes/Atokuru-tentative-title-/backend/internal/domain"
 	"github.com/NUTFes/Atokuru-tentative-title-/backend/internal/gen"
+	"github.com/NUTFes/Atokuru-tentative-title-/backend/internal/usecase"
 )
 
 // ListStallTickets は GET /stalls/{stallId}/tickets。
 func (h *Handler) ListStallTickets(ctx context.Context, req gen.ListStallTicketsRequestObject) (gen.ListStallTicketsResponseObject, error) {
-	return nil, errNotImplemented
+	in := usecase.ListInput{Limit: req.Params.Limit}
+	for _, s := range req.Params.Status {
+		in.Statuses = append(in.Statuses, domain.TicketStatus(s))
+	}
+	if req.Params.Order != nil {
+		in.Order = string(*req.Params.Order)
+	}
+
+	tickets, err := h.tickets.ListByStall(ctx, toID(req.StallId), in)
+	if err != nil {
+		return nil, err
+	}
+	res := make(gen.ListStallTickets200JSONResponse, 0, len(tickets))
+	for i := range tickets {
+		res = append(res, toTicket(&tickets[i]))
+	}
+	return res, nil
 }
 
 // CreateTicket は POST /stalls/{stallId}/tickets。

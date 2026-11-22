@@ -111,3 +111,57 @@ func peopleAhead(t *domain.Ticket, maxReceivedOrderNumber int) int {
 	}
 	return max(t.OrderNumber-maxReceivedOrderNumber-1, 0)
 }
+
+// 整理券一覧の件数（仕様書の limit と合わせる）。
+const (
+	defaultListLimit = 100
+	maxListLimit     = 500
+)
+
+// ListInput は整理券一覧の絞り込みの条件。
+type ListInput struct {
+	Statuses []domain.TicketStatus
+	Limit    *int   // 省略なら defaultListLimit
+	Order    string // "asc"（省略時）か "desc"
+}
+
+// ListByStall は屋台の整理券を、status で絞り込んで order_number の順に返す。
+// 整理券は10万件規模になるので、status の指定を必須にし、件数も制限する。
+func (u *TicketUsecase) ListByStall(ctx context.Context, stallID uint, in ListInput) ([]domain.Ticket, error) {
+	if len(in.Statuses) == 0 {
+		return nil, domain.InvalidInput("status を1つ以上指定してください")
+	}
+	statuses := make([]domain.TicketStatus, 0, len(in.Statuses))
+	seen := map[domain.TicketStatus]bool{}
+	for _, s := range in.Statuses {
+		if !s.Valid() {
+			return nil, domain.InvalidInput("status は waiting / ready / received のどれかにしてください")
+		}
+		if !seen[s] {
+			seen[s] = true
+			statuses = append(statuses, s)
+		}
+	}
+
+	limit := defaultListLimit
+	if in.Limit != nil {
+		limit = *in.Limit
+	}
+	if limit < 1 || limit > maxListLimit {
+		return nil, domain.InvalidInput(fmt.Sprintf("limit は 1 から %d までにしてください", maxListLimit))
+	}
+
+	var descending bool
+	switch in.Order {
+	case "", "asc":
+	case "desc":
+		descending = true
+	default:
+		return nil, domain.InvalidInput("order は asc か desc にしてください")
+	}
+
+	if _, err := findStall(ctx, u.stalls, stallID); err != nil {
+		return nil, err
+	}
+	return u.tickets.ListByStall(ctx, stallID, statuses, limit, descending)
+}
