@@ -1,11 +1,31 @@
 openapi: 3.0.3
 info:
   title: アトクル API
-  version: 0.1.0
-  description: 学園祭の模擬店の整理券を管理する API。各 API は #5 で追加する。
+  version: 0.2.0
+  description: |
+    学園祭の模擬店の整理券を管理する API。
+
+    ## 共通のルール
+    - API はすべて `/api` の下に置く。それ以外の URL は Echo が FE の静的ファイルを返す
+    - JSON の項目名は snake_case にする
+    - 日時は ISO 8601（RFC 3339）の文字列で返す。例：`2026-11-21T10:30:00+09:00`
+    - 失敗したときは、どの API でも `Error`（`code` と `message`）を返す
+    - 来場者のアカウントやログインはない。模擬店側の API にも認証はかけない
+
+    ## 決まっている値
+    - 整理券の status：`waiting`（調理中）/ `ready`（調理完了）/ `received`（受け取り済み）
+    - 屋台の business_status：`open`（営業中）/ `preparing`（準備中）/ `sold_out`（売り切れ）/ `closed`（閉店）
+    - 混雑度：`red` / `yellow` / `green` / `gray`（営業中でない店は `gray`）
 # API はすべて /api の下に置く。それ以外の URL は Echo が FE の静的ファイルを返す。
 servers:
   - url: /api
+tags:
+  - name: health
+    description: 死活監視
+  - name: stalls
+    description: 屋台
+  - name: tickets
+    description: 整理券
 paths:
   /health:
     get:
@@ -19,7 +39,275 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Health"
+
+  /stalls:
+    get:
+      operationId: listStalls
+      summary: 全ての屋台の混雑度・営業状況・HP リンクを取得する（マップ用）
+      description: |
+        屋台は80店程度なので全件を返す。`stall_number` の昇順に並べる。
+        `waiting_count` は status が `waiting` の整理券の数で、混雑度はこれと営業状況から決める。
+      tags: [stalls]
+      responses:
+        "200":
+          description: 屋台の一覧
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/StallSummary"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /stalls/{stallId}:
+    get:
+      operationId: getStall
+      summary: 指定した ID の屋台を取得する（パスワード以外）
+      description: 模擬店画面のログインでは、この API で店が存在するかを確かめる。
+      tags: [stalls]
+      parameters:
+        - $ref: "#/components/parameters/StallId"
+      responses:
+        "200":
+          description: 屋台
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Stall"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /stalls/{stallId}/business-status:
+    patch:
+      operationId: updateBusinessStatus
+      summary: 指定した屋台の営業状況を変更する
+      tags: [stalls]
+      parameters:
+        - $ref: "#/components/parameters/StallId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateBusinessStatusRequest"
+      responses:
+        "200":
+          description: 変更したあとの屋台
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Stall"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /stalls/{stallId}/tickets:
+    get:
+      operationId: listStallTickets
+      summary: 指定した屋台の整理券の一覧を取得する
+      description: |
+        整理券は10万件規模になるので、`status` での絞り込みを必須にし、件数も `limit` で制限する。
+        店の待ち一覧なら `?status=waiting&status=ready` のように指定する。
+        並び順は `order_number` で、`order` で昇順・降順を選ぶ（受け取り済みの新しい順を見たいときは `desc`）。
+      tags: [tickets]
+      parameters:
+        - $ref: "#/components/parameters/StallId"
+        - name: status
+          in: query
+          required: true
+          description: 取得する整理券の status。複数指定できる
+          style: form
+          explode: true
+          schema:
+            type: array
+            minItems: 1
+            items:
+              $ref: "#/components/schemas/TicketStatus"
+        - name: limit
+          in: query
+          required: false
+          description: 最大の件数
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 500
+            default: 100
+        - name: order
+          in: query
+          required: false
+          description: order_number の並び順
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: asc
+      responses:
+        "200":
+          description: 整理券の一覧
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Ticket"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+    post:
+      operationId: createTicket
+      summary: 整理券を発行する
+      description: |
+        `order_number` は屋台ごとに 1 から振る。同時に発行されても重複しない。
+        `public_token` は推測されにくいランダムな文字列で、QR コードの URL にはこれを入れる。
+        営業中（`open`）でない屋台では発行できず、409 を返す。
+      tags: [tickets]
+      parameters:
+        - $ref: "#/components/parameters/StallId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateTicketRequest"
+      responses:
+        "201":
+          description: 発行した整理券
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Ticket"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /tickets/{publicToken}:
+    get:
+      operationId: getTicket
+      summary: 指定した整理券を取得する（前に何人を含む）
+      description: |
+        来場者が使う。整理券の ID は連番なので、推測されにくい `public_token` で指定する。
+        `people_ahead`（前に何人）は、自分の `order_number` − 同じ屋台で `received` の最大 `order_number` − 1。
+        マイナスになるときと、status が `waiting` でないときは 0 にする。
+      tags: [tickets]
+      parameters:
+        - name: publicToken
+          in: path
+          required: true
+          description: 整理券の public_token
+          schema:
+            type: string
+      responses:
+        "200":
+          description: 整理券
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TicketDetail"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /tickets/{ticketId}/status:
+    patch:
+      operationId: updateTicketStatus
+      summary: 指定した整理券の status を変更する
+      description: |
+        模擬店が使う。押し間違いを戻せるように、どの status からどの status にも変更できる。
+        `ready` にしたときは `called_at` に今の時刻を入れ、`waiting` に戻したときは空にする。
+      tags: [tickets]
+      parameters:
+        - name: ticketId
+          in: path
+          required: true
+          description: 整理券の ID
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateTicketStatusRequest"
+      responses:
+        "200":
+          description: 変更したあとの整理券
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Ticket"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
 components:
+  parameters:
+    StallId:
+      name: stallId
+      in: path
+      required: true
+      description: 屋台の ID
+      schema:
+        type: integer
+        format: int64
+
+  responses:
+    BadRequest:
+      description: リクエストの形や値が正しくない
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+          example:
+            code: bad_request
+            message: status は waiting / ready / received のどれかにしてください
+    NotFound:
+      description: 指定したものが見つからない
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+          example:
+            code: not_found
+            message: 屋台が見つかりません
+    Conflict:
+      description: 今の状態ではできない操作
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+          example:
+            code: stall_not_open
+            message: 営業中でない屋台では整理券を発行できません
+    InternalError:
+      description: サーバーの中でエラーが起きた
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+          example:
+            code: internal_error
+            message: サーバーでエラーが起きました
+
   schemas:
     Health:
       type: object
@@ -29,3 +317,193 @@ components:
           type: string
           enum: [ok]
           example: ok
+
+    Error:
+      type: object
+      description: |
+        失敗したときに返す形。`code` はプログラムで見分けるため、`message` は人が読むための文。
+        code の種類：`bad_request` / `not_found` / `stall_not_open` / `internal_error`
+      required: [code, message]
+      properties:
+        code:
+          type: string
+          example: not_found
+        message:
+          type: string
+          example: 屋台が見つかりません
+
+    BusinessStatus:
+      type: string
+      description: 屋台の営業状況。open（営業中）/ preparing（準備中）/ sold_out（売り切れ）/ closed（閉店）
+      enum: [open, preparing, sold_out, closed]
+      example: open
+
+    TicketStatus:
+      type: string
+      description: 整理券の状態。waiting（調理中）/ ready（調理完了）/ received（受け取り済み）
+      enum: [waiting, ready, received]
+      example: waiting
+
+    Congestion:
+      type: string
+      description: 混雑度。red / yellow / green / gray（営業中でない店は gray）
+      enum: [red, yellow, green, gray]
+      example: green
+
+    Stall:
+      type: object
+      description: 屋台。パスワードは返さない
+      required: [id, name, stall_number, hp_link, business_status]
+      properties:
+        id:
+          type: integer
+          format: int64
+          example: 1
+        name:
+          type: string
+          example: 焼きそば研究会
+        stall_number:
+          type: string
+          description: 店番号（パンフレットなどに載っている番号）
+          example: A-01
+        hp_link:
+          type: string
+          nullable: true
+          description: HP のリンク。ない店は null
+          example: https://example.com
+        business_status:
+          $ref: "#/components/schemas/BusinessStatus"
+
+    StallSummary:
+      type: object
+      description: マップ用の屋台の情報
+      required: [id, name, stall_number, hp_link, business_status, waiting_count, congestion]
+      properties:
+        id:
+          type: integer
+          format: int64
+          example: 1
+        name:
+          type: string
+          example: 焼きそば研究会
+        stall_number:
+          type: string
+          example: A-01
+        hp_link:
+          type: string
+          nullable: true
+          example: https://example.com
+        business_status:
+          $ref: "#/components/schemas/BusinessStatus"
+        waiting_count:
+          type: integer
+          description: status が waiting の整理券の数
+          example: 8
+        congestion:
+          $ref: "#/components/schemas/Congestion"
+
+    Ticket:
+      type: object
+      description: 整理券（模擬店画面で使う）
+      required: [id, public_token, stall_id, order_number, status, comment, called_at, created_at, updated_at]
+      properties:
+        id:
+          type: integer
+          format: int64
+          description: 整理券の ID（連番）。URL や QR コードには使わない
+          example: 123
+        public_token:
+          type: string
+          description: 推測されにくいランダムな文字列。QR コードの URL に入れる
+          example: Zp3kq8vN2xYcR7tLm1aB0w
+        stall_id:
+          type: integer
+          format: int64
+          example: 1
+        order_number:
+          type: integer
+          description: 屋台ごとの整理券番号（1 から）
+          example: 42
+        status:
+          $ref: "#/components/schemas/TicketStatus"
+        comment:
+          type: string
+          nullable: true
+          description: 備考（メニューなど）。ない場合は null
+          example: 焼きそば 大盛り
+        called_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: 調理完了（ready）にした時刻。まだなら null
+        created_at:
+          type: string
+          format: date-time
+          description: 発行した時刻
+        updated_at:
+          type: string
+          format: date-time
+
+    TicketDetail:
+      type: object
+      description: 整理券（来場者のユーザー画面で使う）。連番の id は返さない
+      required: [public_token, stall_id, stall_name, stall_number, order_number, status, comment, called_at, created_at, people_ahead]
+      properties:
+        public_token:
+          type: string
+          example: Zp3kq8vN2xYcR7tLm1aB0w
+        stall_id:
+          type: integer
+          format: int64
+          example: 1
+        stall_name:
+          type: string
+          example: 焼きそば研究会
+        stall_number:
+          type: string
+          example: A-01
+        order_number:
+          type: integer
+          example: 42
+        status:
+          $ref: "#/components/schemas/TicketStatus"
+        comment:
+          type: string
+          nullable: true
+          example: 焼きそば 大盛り
+        called_at:
+          type: string
+          format: date-time
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        people_ahead:
+          type: integer
+          minimum: 0
+          description: 自分の前に何人いるか
+          example: 3
+
+    CreateTicketRequest:
+      type: object
+      properties:
+        comment:
+          type: string
+          nullable: true
+          maxLength: 200
+          description: 備考（メニューなど）。なければ省略するか null
+          example: 焼きそば 大盛り
+
+    UpdateTicketStatusRequest:
+      type: object
+      required: [status]
+      properties:
+        status:
+          $ref: "#/components/schemas/TicketStatus"
+
+    UpdateBusinessStatusRequest:
+      type: object
+      required: [business_status]
+      properties:
+        business_status:
+          $ref: "#/components/schemas/BusinessStatus"
