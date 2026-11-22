@@ -13,7 +13,11 @@ func (h *Handler) ListStalls(ctx context.Context, _ gen.ListStallsRequestObject)
 
 // GetStall は GET /stalls/{stallId}。
 func (h *Handler) GetStall(ctx context.Context, req gen.GetStallRequestObject) (gen.GetStallResponseObject, error) {
-	return nil, errNotImplemented
+	s, err := h.stalls.Get(ctx, toID(req.StallId))
+	if err != nil {
+		return nil, err
+	}
+	return gen.GetStall200JSONResponse(toStall(s)), nil
 }
 
 // UpdateBusinessStatus は PATCH /stalls/{stallId}/business-status。
