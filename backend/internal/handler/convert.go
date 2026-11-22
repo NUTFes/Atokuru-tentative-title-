@@ -19,6 +19,20 @@ func toStall(s *domain.Stall) gen.Stall {
 	}
 }
 
+func toTicket(t *domain.Ticket) gen.Ticket {
+	return gen.Ticket{
+		Id:          int64(t.ID),
+		PublicToken: t.PublicToken,
+		StallId:     int64(t.StallID),
+		OrderNumber: t.OrderNumber,
+		Status:      gen.TicketStatus(t.Status),
+		Comment:     t.Comment,
+		CalledAt:    t.CalledAt,
+		CreatedAt:   t.CreatedAt,
+		UpdatedAt:   t.UpdatedAt,
+	}
+}
+
 // toID はパスの ID を uint にする。0 以下や大きすぎる値は、存在しない ID として 0 を返す（0 の ID はない）。
 func toID(id int64) uint {
 	if id <= 0 || uint64(id) > math.MaxUint32 {
