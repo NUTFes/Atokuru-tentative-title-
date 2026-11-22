@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"errors"
+	"log"
 	"net/http"
 	"os"
 	"os/signal"
@@ -14,9 +15,19 @@ import (
 
 	"github.com/NUTFes/Atokuru-tentative-title-/backend/internal/gen"
 	"github.com/NUTFes/Atokuru-tentative-title-/backend/internal/handler"
+	"github.com/NUTFes/Atokuru-tentative-title-/backend/internal/infra/db"
 )
 
 func main() {
+	gdb, err := db.Open(os.Getenv("TURSO_DATABASE_URL"), os.Getenv("TURSO_AUTH_TOKEN"))
+	if err != nil {
+		log.Fatal(err)
+	}
+	if err := db.Migrate(gdb); err != nil {
+		log.Fatal(err)
+	}
+	_ = gdb // repository に渡すのは、API を実装する Issue から
+
 	e := echo.New()
 	e.HideBanner = true
 	e.Use(middleware.RequestLogger())

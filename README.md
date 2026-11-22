@@ -156,7 +156,8 @@ DB の接続情報などの秘密情報は `.env` に書き、Git には上げ�
 
 | コマンド（`backend/` で実行） | 実行する処理 |
 | -------- | ------------ |
-| `go run ./cmd/server` | API サーバーを起動する（ポートは環境変数 `PORT`、なければ 8080）。`http://localhost:8080/api/health` で `{"status":"ok"}` が返れば OK |
+| `set -a && . ./.env && set +a && go run ./cmd/server` | `.env` の環境変数を読み込んで API サーバーを起動する（ポートは `PORT`、なければ 8080）。起動時に DB のテーブルを作る（足りないものだけ足す）。`http://localhost:8080/api/health` で `{"status":"ok"}` が返れば OK |
+| `go test ./...` | テストを実行する（Turso の設定がなければ、手元の SQLite ファイルだけで試す） |
 | `go generate ./...` | `openapi/openapi.yaml` から `internal/gen/api.gen.go` を生成し直す |
 
 <p align="right">(<a href="#top">トップへ</a>)</p>
