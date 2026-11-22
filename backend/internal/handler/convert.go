@@ -5,6 +5,7 @@ import (
 
 	"github.com/NUTFes/Atokuru-tentative-title-/backend/internal/domain"
 	"github.com/NUTFes/Atokuru-tentative-title-/backend/internal/gen"
+	"github.com/NUTFes/Atokuru-tentative-title-/backend/internal/usecase"
 )
 
 // domain の entity を、仕様書の形（gen の型）に詰め替える。
@@ -30,6 +31,21 @@ func toTicket(t *domain.Ticket) gen.Ticket {
 		CalledAt:    t.CalledAt,
 		CreatedAt:   t.CreatedAt,
 		UpdatedAt:   t.UpdatedAt,
+	}
+}
+
+func toTicketDetail(d *usecase.TicketDetail) gen.TicketDetail {
+	return gen.TicketDetail{
+		PublicToken: d.Ticket.PublicToken,
+		StallId:     int64(d.Ticket.StallID),
+		StallName:   d.Stall.Name,
+		StallNumber: d.Stall.StallNumber,
+		OrderNumber: d.Ticket.OrderNumber,
+		Status:      gen.TicketStatus(d.Ticket.Status),
+		Comment:     d.Ticket.Comment,
+		CalledAt:    d.Ticket.CalledAt,
+		CreatedAt:   d.Ticket.CreatedAt,
+		PeopleAhead: d.PeopleAhead,
 	}
 }
 
