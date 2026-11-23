@@ -270,6 +270,11 @@ func SeedTickets(gdb *gorm.DB, tickets []domain.Ticket, reset bool, progress fun
 		if !reset {
 			return fmt.Errorf("整理券がすでに %d 件あります（消してから入れ直すときは -reset を付けてください）", existing)
 		}
+		// 購読は整理券に紐づくので先に消す。外部キーが効いていない DB でも、消した整理券の購読が
+		// 同じ ID で作り直した別の整理券に付いて、他人に通知が届くことがないようにする。
+		if err := gdb.Where("1 = 1").Delete(&domain.PushSubscription{}).Error; err != nil {
+			return fmt.Errorf("通知の購読を消せません: %w", err)
+		}
 		if err := gdb.Where("1 = 1").Delete(&domain.Ticket{}).Error; err != nil {
 			return fmt.Errorf("整理券を消せません: %w", err)
 		}

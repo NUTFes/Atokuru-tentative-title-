@@ -38,7 +38,10 @@ type Ticket struct {
 	// Comment は備考（メニューなど）。ない場合は null。
 	Comment *string
 	// CalledAt は調理完了（ready）にした時刻。まだなら null。
-	CalledAt  *time.Time
-	CreatedAt time.Time
-	UpdatedAt time.Time
+	CalledAt *time.Time
+	// NearNotifiedAt は「あと3人」の通知を送った時刻。まだなら null。
+	// 番号が一気に進んだり、受け取り済みを戻して付け直したりしても、同じ通知を2回送らないために使う。
+	NearNotifiedAt *time.Time
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
 }

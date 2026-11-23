@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: アトクル API
-  version: 0.2.0
+  version: 0.3.0
   description: |
     学園祭の模擬店の整理券を管理する API。
 
@@ -16,6 +16,30 @@ info:
     - 整理券の status：`waiting`（調理中）/ `ready`（調理完了）/ `received`（受け取り済み）
     - 屋台の business_status：`open`（営業中）/ `preparing`（準備中）/ `sold_out`（売り切れ）/ `closed`（閉店）
     - 混雑度：`red` / `yellow` / `green` / `gray`（営業中でない店は `gray`）
+
+    ## 通知（Web Push）
+    来場者が整理券の画面で通知を許可すると、FE は `GET /push/vapid-public-key` の公開鍵で購読し、
+    `POST /tickets/{publicToken}/push-subscriptions` で購読をサーバーに登録する。
+    サーバーは次のときに、その整理券の購読へ通知を送る。
+    - 調理完了：整理券が `ready` になったとき（`type: "ready"`）
+    - あと3人：ほかの整理券が `received` になって番号が進み、前に何人が3人以下になったとき（`type: "near"`）。1枚につき1回だけ。発券した時点ですでに3人以下なら送らない
+
+    通知の中身（push の data）は API ではないのでこの仕様書の paths にはないが、次の JSON にする。
+    文言は多言語対応のため、FE の `sw.js` で `type` を見て組み立てる。
+    ```json
+    {
+      "type": "ready",
+      "public_token": "Zp3kq8vN2xYcR7tLm1aB0w",
+      "stall_name": "焼きそば研究会",
+      "stall_number": "A-01",
+      "order_number": 42,
+      "people_ahead": 0,
+      "url": "/?token=Zp3kq8vN2xYcR7tLm1aB0w"
+    }
+    ```
+    - `type`：`ready`（調理完了）か `near`（あと3人）
+    - `people_ahead`：送った時点の前に何人。`ready` では 0
+    - `url`：通知を押したときに開く URL
 # API はすべて /api の下に置く。それ以外の URL は Echo が FE の静的ファイルを返す。
 servers:
   - url: /api
@@ -26,6 +50,8 @@ tags:
     description: 屋台
   - name: tickets
     description: 整理券
+  - name: push
+    description: 通知（Web Push）
 paths:
   /health:
     get:
@@ -259,6 +285,62 @@ paths:
         "500":
           $ref: "#/components/responses/InternalError"
 
+  /push/vapid-public-key:
+    get:
+      operationId: getVapidPublicKey
+      summary: 通知の購読に使う VAPID 公開鍵を取得する
+      description: |
+        FE が `pushManager.subscribe` の `applicationServerKey` に渡す公開鍵（base64url）を返す。
+        FE は静的エクスポートでビルド時に鍵を埋め込めないので、API で渡す。
+        サーバーに鍵が設定されていない（通知を使わない）ときは 503 を返す。FE は通知のボタンを出さない。
+      tags: [push]
+      responses:
+        "200":
+          description: VAPID 公開鍵
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VapidPublicKey"
+        "503":
+          $ref: "#/components/responses/PushUnavailable"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /tickets/{publicToken}/push-subscriptions:
+    post:
+      operationId: createPushSubscription
+      summary: 整理券の通知の購読を登録する
+      description: |
+        来場者が使う。リクエストは、ブラウザの `PushSubscription.toJSON()` をそのまま送ればよい。
+        整理券の ID は連番なので、推測されにくい `public_token` で指定する（他人の整理券に通知を登録されないように）。
+        同じ整理券に同じ `endpoint` をもう一度登録したときは上書きする（エラーにしない）。
+        1つの端末で複数の整理券を持てるので、整理券ごとに登録する。
+        受け取り済み（`received`）の整理券には登録できず、400 を返す。
+        解除する API はない。受け取り済みになったら送らなくなり、プッシュサーバーが無効と返した購読はサーバーが消す。
+      tags: [push]
+      parameters:
+        - name: publicToken
+          in: path
+          required: true
+          description: 整理券の public_token
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PushSubscription"
+      responses:
+        "204":
+          description: 登録した
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
 components:
   parameters:
     StallId:
@@ -298,6 +380,15 @@ components:
           example:
             code: stall_not_open
             message: 営業中でない屋台では整理券を発行できません
+    PushUnavailable:
+      description: サーバーに VAPID の鍵が設定されておらず、通知を使えない
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+          example:
+            code: push_unavailable
+            message: 通知は使えません
     InternalError:
       description: サーバーの中でエラーが起きた
       content:
@@ -322,7 +413,7 @@ components:
       type: object
       description: |
         失敗したときに返す形。`code` はプログラムで見分けるため、`message` は人が読むための文。
-        code の種類：`bad_request` / `not_found` / `stall_not_open` / `internal_error`
+        code の種類：`bad_request` / `not_found` / `stall_not_open` / `push_unavailable` / `internal_error`
       required: [code, message]
       properties:
         code:
@@ -507,3 +598,42 @@ components:
       properties:
         business_status:
           $ref: "#/components/schemas/BusinessStatus"
+
+    VapidPublicKey:
+      type: object
+      required: [public_key]
+      properties:
+        public_key:
+          type: string
+          description: VAPID 公開鍵（base64url）
+          example: BEl62iUYgUivxIkv69yViEuiBIa-Ib9-SkvMeAtA3LFgDzkrxZJjSgSnfckjBJuBkr3qBUYIHBQFLXYp5Nksh8U
+
+    PushSubscription:
+      type: object
+      description: |
+        ブラウザの `PushSubscription.toJSON()` の形。項目名はブラウザに合わせているので snake_case ではない。
+        `endpoint` は https の URL にする（サーバーはこの URL に通知を送る）。
+      required: [endpoint, keys]
+      properties:
+        endpoint:
+          type: string
+          maxLength: 2048
+          description: プッシュサーバーの URL（https）
+          example: https://fcm.googleapis.com/fcm/send/abc123
+        expirationTime:
+          type: number
+          format: double
+          nullable: true
+          description: ブラウザが付けてくる有効期限。サーバーでは使わない
+        keys:
+          type: object
+          required: [p256dh, auth]
+          properties:
+            p256dh:
+              type: string
+              maxLength: 256
+              description: 通知を暗号化するための公開鍵（base64url）
+            auth:
+              type: string
+              maxLength: 256
+              description: 通知を暗号化するための認証用の値（base64url）
