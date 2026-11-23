@@ -16,6 +16,7 @@ func Migrate(gdb *gorm.DB) error {
 		&domain.Stall{},
 		&domain.Ticket{},
 		&domain.CommentTemplate{},
+		&domain.PushSubscription{},
 	); err != nil {
 		return fmt.Errorf("テーブルを作れません: %w", err)
 	}

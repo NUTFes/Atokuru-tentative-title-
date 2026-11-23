@@ -7,7 +7,10 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "gen:api": "openapi-typescript ../openapi/openapi.yaml -o src/lib/api/schema.d.ts"
+    "gen:api": "openapi-typescript ../openapi/openapi.yaml -o src/lib/api/schema.d.ts",
+    "copy-locales": "node -e \"const fs=require('fs');fs.mkdirSync('public/locales',{recursive:true});for(const l of ['ja','en'])fs.copyFileSync('src/locales/'+l+'.json','public/locales/'+l+'.json')\"",
+    "predev": "npm run copy-locales",
+    "prebuild": "npm run copy-locales"
   },
   "dependencies": {
     "@base-ui/react": "^1.9.0",
