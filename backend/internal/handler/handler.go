@@ -11,11 +11,12 @@ import (
 type Handler struct {
 	stalls  *usecase.StallUsecase
 	tickets *usecase.TicketUsecase
+	push    *usecase.PushUsecase
 }
 
 // コンパイル時に、仕様書の全 API を実装しているかを確かめる。
 var _ gen.StrictServerInterface = (*Handler)(nil)
 
-func New(stalls *usecase.StallUsecase, tickets *usecase.TicketUsecase) *Handler {
-	return &Handler{stalls: stalls, tickets: tickets}
+func New(stalls *usecase.StallUsecase, tickets *usecase.TicketUsecase, push *usecase.PushUsecase) *Handler {
+	return &Handler{stalls: stalls, tickets: tickets, push: push}
 }
