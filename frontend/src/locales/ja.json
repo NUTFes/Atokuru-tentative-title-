@@ -47,7 +47,8 @@
     "readyMessage": "調理が完了しました。お店で受け取ってください",
     "receivedMessage": "受け取りが完了しました",
     "note": "備考",
-    "issuedAt": "発行時刻"
+    "issuedAt": "発行時刻",
+    "detail": "詳細を見る"
   },
   "home": {
     "title": "整理券",
@@ -85,7 +86,9 @@
       "title": "整理券を発行",
       "noteLabel": "備考",
       "notePlaceholder": "例：大盛り、2個",
-      "submit": "発行する"
+      "submit": "発行する",
+      "description": "必要なら備考を入力してください",
+      "submitting": "発行中…"
     },
     "issuedModal": {
       "title": "整理券を発行しました",
@@ -94,13 +97,20 @@
     "status": {
       "title": "営業状況",
       "description": "いまの営業状況を選んでください",
-      "updated": "営業状況を変更しました"
+      "updated": "営業状況を変更しました",
+      "hints": {
+        "open": "整理券を発行できます",
+        "preparing": "まだ営業を始めていません",
+        "sold_out": "今日の分は売り切れました",
+        "closed": "今日の営業は終わりました"
+      }
     },
     "settings": {
       "title": "その他",
       "language": "言語",
       "logout": "ログアウト",
-      "logoutConfirm": "ログアウトしますか？"
+      "logoutConfirm": "ログアウトしますか？",
+      "account": "アカウント"
     }
   },
   "language": {
