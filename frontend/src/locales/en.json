@@ -71,7 +71,9 @@
       "stallId": "Stall ID",
       "password": "Password",
       "submit": "Log in",
-      "failed": "Incorrect stall ID or password"
+      "failed": "Incorrect stall ID or password",
+      "notFound": "No stall found with this stall ID",
+      "description": "Enter the stall ID you were given"
     },
     "tickets": {
       "title": "Tickets",
@@ -80,7 +82,8 @@
       "issue": "Issue ticket",
       "markReady": "Mark as ready",
       "markReceived": "Mark as picked up",
-      "undo": "Undo"
+      "undo": "Undo",
+      "notOpen": "You can't issue tickets while the stall is not open. Set the status to \"Open\""
     },
     "issueSheet": {
       "title": "Issue ticket",
