@@ -53,5 +53,12 @@ func (h *Handler) GetTicket(ctx context.Context, req gen.GetTicketRequestObject)
 
 // UpdateTicketStatus は PATCH /tickets/{ticketId}/status。
 func (h *Handler) UpdateTicketStatus(ctx context.Context, req gen.UpdateTicketStatusRequestObject) (gen.UpdateTicketStatusResponseObject, error) {
-	return nil, errNotImplemented
+	if req.Body == nil {
+		return nil, domain.InvalidInput("status を指定してください")
+	}
+	t, err := h.tickets.UpdateStatus(ctx, toID(req.TicketId), domain.TicketStatus(req.Body.Status))
+	if err != nil {
+		return nil, err
+	}
+	return gen.UpdateTicketStatus200JSONResponse(toTicket(t)), nil
 }

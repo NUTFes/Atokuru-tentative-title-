@@ -103,3 +103,31 @@ func (r *TicketRepository) listByStallQuery(ctx context.Context, stallID uint, s
 		Order(order).
 		Limit(limit)
 }
+
+// FindByID は ID で整理券を1件取る。ないときは domain.ErrNotFound を返す。
+func (r *TicketRepository) FindByID(ctx context.Context, id uint) (*domain.Ticket, error) {
+	var t domain.Ticket
+	err := r.db.WithContext(ctx).First(&t, id).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, domain.ErrNotFound
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &t, nil
+}
+
+// UpdateStatus は整理券の status と called_at を書き換え、書き換えたあとの整理券を返す。
+func (r *TicketRepository) UpdateStatus(ctx context.Context, id uint, status domain.TicketStatus, calledAt *time.Time) (*domain.Ticket, error) {
+	res := r.db.WithContext(ctx).Model(&domain.Ticket{ID: id}).Updates(map[string]any{
+		"status":    string(status),
+		"called_at": calledAt,
+	})
+	if res.Error != nil {
+		return nil, res.Error
+	}
+	if res.RowsAffected == 0 {
+		return nil, domain.ErrNotFound
+	}
+	return r.FindByID(ctx, id)
+}

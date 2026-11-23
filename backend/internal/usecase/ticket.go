@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 	"unicode/utf8"
 
 	"github.com/NUTFes/Atokuru-tentative-title-/backend/internal/domain"
@@ -164,4 +165,38 @@ func (u *TicketUsecase) ListByStall(ctx context.Context, stallID uint, in ListIn
 		return nil, err
 	}
 	return u.tickets.ListByStall(ctx, stallID, statuses, limit, descending)
+}
+
+// UpdateStatus は整理券の status を変える。押し間違いを戻せるように、どの status からどの status にも変えられる。
+//
+// called_at（調理完了にした時刻）は次のようにする。
+//   - ready にしたとき：今の時刻を入れる
+//   - waiting に戻したとき：空にする（まだ調理完了していないので）
+//   - received にしたとき：そのまま残す（いつ呼び出したかの記録として）
+//
+// 今と同じ status を指定したときは、何も変えずにそのまま返す（ready を2回押しても呼び出し時刻は変わらない）。
+func (u *TicketUsecase) UpdateStatus(ctx context.Context, id uint, status domain.TicketStatus) (*domain.Ticket, error) {
+	if !status.Valid() {
+		return nil, domain.InvalidInput("status は waiting / ready / received のどれかにしてください")
+	}
+	t, err := u.tickets.FindByID(ctx, id)
+	if errors.Is(err, domain.ErrNotFound) {
+		return nil, domain.NotFound("整理券が見つかりません")
+	}
+	if err != nil {
+		return nil, err
+	}
+	if t.Status == status {
+		return t, nil
+	}
+
+	calledAt := t.CalledAt
+	switch status {
+	case domain.TicketStatusReady:
+		now := time.Now()
+		calledAt = &now
+	case domain.TicketStatusWaiting:
+		calledAt = nil
+	}
+	return u.tickets.UpdateStatus(ctx, id, status, calledAt)
 }
