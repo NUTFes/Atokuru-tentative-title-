@@ -1,0 +1,110 @@
+{
+  "common": {
+    "appName": "アトクル",
+    "loading": "読み込み中…",
+    "error": "エラーが発生しました",
+    "networkError": "通信できませんでした。電波のよい場所でもう一度お試しください",
+    "retry": "もう一度試す",
+    "ok": "OK",
+    "cancel": "キャンセル",
+    "close": "閉じる",
+    "back": "戻る"
+  },
+  "nav": {
+    "user": {
+      "home": "整理券",
+      "map": "マップ"
+    },
+    "stall": {
+      "tickets": "整理券一覧",
+      "status": "営業状況",
+      "settings": "その他"
+    }
+  },
+  "ticketStatus": {
+    "waiting": "調理中",
+    "ready": "調理完了",
+    "received": "受け取り済み"
+  },
+  "businessStatus": {
+    "open": "営業中",
+    "preparing": "準備中",
+    "sold_out": "売り切れ",
+    "closed": "閉店"
+  },
+  "congestion": {
+    "label": "混雑度",
+    "red": "混雑",
+    "yellow": "やや混雑",
+    "green": "空いている",
+    "gray": "営業していない"
+  },
+  "ticket": {
+    "orderNumber": "整理券番号",
+    "orderNumberValue": "{number} 番",
+    "peopleAhead": "あなたの前に {count} 人",
+    "nextUp": "次はあなたの番です",
+    "readyMessage": "調理が完了しました。お店で受け取ってください",
+    "receivedMessage": "受け取りが完了しました",
+    "note": "備考",
+    "issuedAt": "発行時刻"
+  },
+  "home": {
+    "title": "整理券",
+    "empty": "整理券はまだありません",
+    "emptyHint": "お店で受け取った QR コードを読み取ると、ここに整理券が表示されます",
+    "added": "整理券を追加しました",
+    "alreadyAdded": "この整理券はすでに追加されています",
+    "notFound": "整理券が見つかりませんでした",
+    "remove": "一覧から消す",
+    "removeConfirm": "この整理券を一覧から消しますか？"
+  },
+  "map": {
+    "title": "マップ",
+    "waitingCount": "待ち {count} 人",
+    "homepage": "お店のページを見る"
+  },
+  "stall": {
+    "login": {
+      "title": "模擬店ログイン",
+      "stallId": "店舗 ID",
+      "password": "パスワード",
+      "submit": "ログイン",
+      "failed": "店舗 ID またはパスワードが違います"
+    },
+    "tickets": {
+      "title": "整理券一覧",
+      "waitingCount": "待ち {count} 件",
+      "empty": "待っている整理券はありません",
+      "issue": "整理券を発行",
+      "markReady": "調理完了にする",
+      "markReceived": "受け取り済みにする",
+      "undo": "元に戻す"
+    },
+    "issueSheet": {
+      "title": "整理券を発行",
+      "noteLabel": "備考",
+      "notePlaceholder": "例：大盛り、2個",
+      "submit": "発行する"
+    },
+    "issuedModal": {
+      "title": "整理券を発行しました",
+      "guide": "お客さまにこの QR コードを読み取ってもらってください"
+    },
+    "status": {
+      "title": "営業状況",
+      "description": "いまの営業状況を選んでください",
+      "updated": "営業状況を変更しました"
+    },
+    "settings": {
+      "title": "その他",
+      "language": "言語",
+      "logout": "ログアウト",
+      "logoutConfirm": "ログアウトしますか？"
+    }
+  },
+  "language": {
+    "ja": "日本語",
+    "en": "English"
+  }
+}

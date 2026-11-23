@@ -1,0 +1,110 @@
+{
+  "common": {
+    "appName": "Atokuru",
+    "loading": "Loading…",
+    "error": "Something went wrong",
+    "networkError": "Could not connect. Please try again where the signal is better",
+    "retry": "Try again",
+    "ok": "OK",
+    "cancel": "Cancel",
+    "close": "Close",
+    "back": "Back"
+  },
+  "nav": {
+    "user": {
+      "home": "Tickets",
+      "map": "Map"
+    },
+    "stall": {
+      "tickets": "Tickets",
+      "status": "Status",
+      "settings": "More"
+    }
+  },
+  "ticketStatus": {
+    "waiting": "Cooking",
+    "ready": "Ready",
+    "received": "Picked up"
+  },
+  "businessStatus": {
+    "open": "Open",
+    "preparing": "Getting ready",
+    "sold_out": "Sold out",
+    "closed": "Closed"
+  },
+  "congestion": {
+    "label": "Crowd level",
+    "red": "Busy",
+    "yellow": "Moderate",
+    "green": "Quiet",
+    "gray": "Not open"
+  },
+  "ticket": {
+    "orderNumber": "Ticket No.",
+    "orderNumberValue": "No. {number}",
+    "peopleAhead": "{count} ahead of you",
+    "nextUp": "You're next",
+    "readyMessage": "Your order is ready. Please pick it up at the stall",
+    "receivedMessage": "Picked up",
+    "note": "Note",
+    "issuedAt": "Issued at"
+  },
+  "home": {
+    "title": "Tickets",
+    "empty": "No tickets yet",
+    "emptyHint": "Scan the QR code you got at a stall and your ticket will appear here",
+    "added": "Ticket added",
+    "alreadyAdded": "This ticket has already been added",
+    "notFound": "Ticket not found",
+    "remove": "Remove from list",
+    "removeConfirm": "Remove this ticket from the list?"
+  },
+  "map": {
+    "title": "Map",
+    "waitingCount": "{count} waiting",
+    "homepage": "Visit stall page"
+  },
+  "stall": {
+    "login": {
+      "title": "Stall login",
+      "stallId": "Stall ID",
+      "password": "Password",
+      "submit": "Log in",
+      "failed": "Incorrect stall ID or password"
+    },
+    "tickets": {
+      "title": "Tickets",
+      "waitingCount": "{count} waiting",
+      "empty": "No tickets waiting",
+      "issue": "Issue ticket",
+      "markReady": "Mark as ready",
+      "markReceived": "Mark as picked up",
+      "undo": "Undo"
+    },
+    "issueSheet": {
+      "title": "Issue ticket",
+      "noteLabel": "Note",
+      "notePlaceholder": "e.g. Large, 2 pcs",
+      "submit": "Issue"
+    },
+    "issuedModal": {
+      "title": "Ticket issued",
+      "guide": "Ask the customer to scan this QR code"
+    },
+    "status": {
+      "title": "Status",
+      "description": "Choose your current status",
+      "updated": "Status updated"
+    },
+    "settings": {
+      "title": "More",
+      "language": "Language",
+      "logout": "Log out",
+      "logoutConfirm": "Log out?"
+    }
+  },
+  "language": {
+    "ja": "日本語",
+    "en": "English"
+  }
+}
