@@ -136,6 +136,8 @@
 
 shadcn/ui のコンポーネントは `frontend/` で `npx shadcn@latest add <component>`（例: `npx shadcn@latest add button`）を実行して追加します。生成先は `src/components/ui/` です。
 
+shadcn が `import { cn } from "cn"` で生成することがあるので、追加したら `@/lib/utils` に直し、`package.json` に `cn` が入っていたら `npm uninstall cn` で外してください。
+
 <p align="right">(<a href="#top">トップへ</a>)</p>
 
 ## 開発環境構築
@@ -165,6 +167,7 @@ docker compose up --build
 | `PORT` | API サーバーのポート | `8080` | `8080` |
 | `STATIC_DIR` | FE のビルド結果（`frontend/out/`）の場所。設定すると `/api` 以外の URL で FE のページを返す | なし（API だけ動かす） | 空（`next dev` を使う） |
 | `CORS_ALLOW_ORIGINS` | 別のオリジンから API を呼ぶことを許可する（カンマ区切り）。本番は同じオリジンなので空 | なし | `http://localhost:3000` |
+| `NEXT_PUBLIC_API_BASE_URL` | FE から呼ぶ API の URL（`frontend/.env.local` に書く）。本番は同じオリジンなので空 | `/api` | `http://localhost:8080/api` |
 
 `backend/.env.example` を `backend/.env` にコピーして値を埋めてください。
 
@@ -185,6 +188,7 @@ DB の接続情報などの秘密情報は `.env` に書き、Git には上げ�
 | `npm run build` | 静的エクスポートでビルドする。`frontend/out/` に HTML・CSS・JS ができる |
 | `npm run lint` | ESLint でチェックする |
 | `npx shadcn@latest add <component>` | shadcn/ui のコンポーネントを `src/components/ui/` に追加する |
+| `npm run gen:api` | `openapi/openapi.yaml` から API の型（`src/lib/api/schema.d.ts`）を作り直す。仕様書を変えたら実行する |
 
 Docker でビルドだけを確かめるときは、`frontend/` で `docker build --target build .` を実行します。
 
