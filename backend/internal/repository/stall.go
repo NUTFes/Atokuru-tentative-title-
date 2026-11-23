@@ -31,3 +31,15 @@ func (r *StallRepository) FindByID(ctx context.Context, id uint) (*domain.Stall,
 	}
 	return &s, nil
 }
+
+// UpdateBusinessStatus は屋台の営業状況を書き換え、書き換えたあとの屋台を返す。
+func (r *StallRepository) UpdateBusinessStatus(ctx context.Context, id uint, status domain.BusinessStatus) (*domain.Stall, error) {
+	res := r.db.WithContext(ctx).Model(&domain.Stall{ID: id}).Update("business_status", string(status))
+	if res.Error != nil {
+		return nil, res.Error
+	}
+	if res.RowsAffected == 0 {
+		return nil, domain.ErrNotFound
+	}
+	return r.FindByID(ctx, id)
+}

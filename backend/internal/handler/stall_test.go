@@ -65,3 +65,53 @@ func TestGetStall_NotFound(t *testing.T) {
 		}
 	}
 }
+
+func TestUpdateBusinessStatus(t *testing.T) {
+	e, gdb := newTestServer(t)
+	s := createStall(t, gdb, "A-01", domain.BusinessStatusPreparing)
+	path := "/api/stalls/" + itoa(s.ID) + "/business-status"
+
+	for _, status := range []string{"open", "sold_out", "closed", "preparing", "open"} {
+		rec := doRequest(e, http.MethodPatch, path, `{"business_status":"`+status+`"}`)
+		if rec.Code != http.StatusOK {
+			t.Fatalf("%s: status = %d, body = %s", status, rec.Code, rec.Body)
+		}
+		if got := decode[gen.Stall](t, rec.Body.Bytes()); string(got.BusinessStatus) != status {
+			t.Errorf("got %s, want %s", got.BusinessStatus, status)
+		}
+		// GET でも変わっている
+		got := decode[gen.Stall](t, doRequest(e, http.MethodGet, "/api/stalls/"+itoa(s.ID), "").Body.Bytes())
+		if string(got.BusinessStatus) != status {
+			t.Errorf("GET: got %s, want %s", got.BusinessStatus, status)
+		}
+	}
+
+	// 営業中にしたら発券でき、閉店にしたら発券できない
+	issueTicket(t, e, s.ID, `{}`)
+	doRequest(e, http.MethodPatch, path, `{"business_status":"closed"}`)
+	if rec := doRequest(e, http.MethodPost, "/api/stalls/"+itoa(s.ID)+"/tickets", `{}`); rec.Code != http.StatusConflict {
+		t.Errorf("閉店で発券: status = %d", rec.Code)
+	}
+}
+
+func TestUpdateBusinessStatus_Errors(t *testing.T) {
+	e, gdb := newTestServer(t)
+	s := createStall(t, gdb, "A-01", domain.BusinessStatusOpen)
+	path := "/api/stalls/" + itoa(s.ID) + "/business-status"
+
+	tests := []struct {
+		path, body string
+		want       int
+		wantCode   string
+	}{
+		{path, `{"business_status":"busy"}`, http.StatusBadRequest, "bad_request"},
+		{path, `{}`, http.StatusBadRequest, "bad_request"},
+		{"/api/stalls/999/business-status", `{"business_status":"open"}`, http.StatusNotFound, "not_found"},
+	}
+	for _, tt := range tests {
+		rec := doRequest(e, http.MethodPatch, tt.path, tt.body)
+		if rec.Code != tt.want || !strings.Contains(rec.Body.String(), `"code":"`+tt.wantCode+`"`) {
+			t.Errorf("%s %s: status = %d, body = %s", tt.path, tt.body, rec.Code, rec.Body)
+		}
+	}
+}

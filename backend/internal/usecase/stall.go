@@ -34,3 +34,15 @@ func findStall(ctx context.Context, stalls *repository.StallRepository, id uint)
 	}
 	return s, nil
 }
+
+// UpdateBusinessStatus は屋台の営業状況を変える。open / preparing / sold_out / closed のどれからどれにも変えられる。
+func (u *StallUsecase) UpdateBusinessStatus(ctx context.Context, id uint, status domain.BusinessStatus) (*domain.Stall, error) {
+	if !status.Valid() {
+		return nil, domain.InvalidInput("business_status は open / preparing / sold_out / closed のどれかにしてください")
+	}
+	s, err := u.stalls.UpdateBusinessStatus(ctx, id, status)
+	if errors.Is(err, domain.ErrNotFound) {
+		return nil, domain.NotFound("屋台が見つかりません")
+	}
+	return s, err
+}
