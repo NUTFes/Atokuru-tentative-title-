@@ -2,6 +2,7 @@ package handler
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strings"
 	"sync"
@@ -172,5 +173,86 @@ func TestGetTicket_NotFound(t *testing.T) {
 	rec := doRequest(e, http.MethodGet, "/api/tickets/no-such-token", "")
 	if rec.Code != http.StatusNotFound || !strings.Contains(rec.Body.String(), `"code":"not_found"`) {
 		t.Errorf("status = %d, body = %s", rec.Code, rec.Body)
+	}
+}
+
+func TestListStallTickets(t *testing.T) {
+	e, gdb := newTestServer(t)
+	s := createStall(t, gdb, "A-01", domain.BusinessStatusOpen)
+	other := createStall(t, gdb, "A-02", domain.BusinessStatusOpen)
+	issueTicket(t, e, other.ID, `{}`) // 別の屋台の整理券は混ざらない
+
+	// 1〜6番を発行し、status を waiting, ready, received, waiting, received, ready にする
+	statuses := []domain.TicketStatus{"waiting", "ready", "received", "waiting", "received", "ready"}
+	for _, st := range statuses {
+		tk := issueTicket(t, e, s.ID, `{}`)
+		if err := gdb.Model(&domain.Ticket{}).Where("id = ?", tk.Id).Update("status", st).Error; err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	orderNumbers := func(path string) []int {
+		t.Helper()
+		rec := doRequest(e, http.MethodGet, path, "")
+		if rec.Code != http.StatusOK {
+			t.Fatalf("%s: status = %d, body = %s", path, rec.Code, rec.Body)
+		}
+		var nums []int
+		for _, tk := range decode[[]gen.Ticket](t, rec.Body.Bytes()) {
+			if tk.StallId != int64(s.ID) {
+				t.Errorf("別の屋台の整理券が混ざっています: %+v", tk)
+			}
+			nums = append(nums, tk.OrderNumber)
+		}
+		return nums
+	}
+	base := "/api/stalls/" + itoa(s.ID) + "/tickets"
+
+	tests := []struct {
+		query string
+		want  []int
+	}{
+		{"?status=waiting&status=ready", []int{1, 2, 4, 6}},
+		{"?status=received", []int{3, 5}},
+		{"?status=received&order=desc", []int{5, 3}},
+		{"?status=waiting&status=ready&limit=2", []int{1, 2}},
+		{"?status=waiting&status=waiting", []int{1, 4}},
+	}
+	for _, tt := range tests {
+		if got := orderNumbers(base + tt.query); fmt.Sprint(got) != fmt.Sprint(tt.want) {
+			t.Errorf("%s: got %v, want %v", tt.query, got, tt.want)
+		}
+	}
+
+	// 該当なしは空の配列（null ではない）
+	empty := createStall(t, gdb, "A-03", domain.BusinessStatusOpen)
+	if rec := doRequest(e, http.MethodGet, "/api/stalls/"+itoa(empty.ID)+"/tickets?status=waiting", ""); strings.TrimSpace(rec.Body.String()) != "[]" {
+		t.Errorf("空のとき: %s", rec.Body)
+	}
+}
+
+func TestListStallTickets_Errors(t *testing.T) {
+	e, gdb := newTestServer(t)
+	s := createStall(t, gdb, "A-01", domain.BusinessStatusOpen)
+	base := "/api/stalls/" + itoa(s.ID) + "/tickets"
+
+	tests := []struct {
+		path     string
+		want     int
+		wantCode string
+	}{
+		{base, http.StatusBadRequest, "bad_request"},
+		{base + "?status=cooking", http.StatusBadRequest, "bad_request"},
+		{base + "?status=waiting&limit=0", http.StatusBadRequest, "bad_request"},
+		{base + "?status=waiting&limit=501", http.StatusBadRequest, "bad_request"},
+		{base + "?status=waiting&limit=abc", http.StatusBadRequest, "bad_request"},
+		{base + "?status=waiting&order=random", http.StatusBadRequest, "bad_request"},
+		{"/api/stalls/999/tickets?status=waiting", http.StatusNotFound, "not_found"},
+	}
+	for _, tt := range tests {
+		rec := doRequest(e, http.MethodGet, tt.path, "")
+		if rec.Code != tt.want || !strings.Contains(rec.Body.String(), `"code":"`+tt.wantCode+`"`) {
+			t.Errorf("%s: status = %d, body = %s", tt.path, rec.Code, rec.Body)
+		}
 	}
 }

@@ -12,7 +12,6 @@ func TestNotImplementedRoutes(t *testing.T) {
 	routes := []struct{ method, path, body string }{
 		{http.MethodGet, "/api/stalls", ""},
 		{http.MethodPatch, "/api/stalls/1/business-status", `{"business_status":"open"}`},
-		{http.MethodGet, "/api/stalls/1/tickets?status=waiting", ""},
 		{http.MethodPatch, "/api/tickets/1/status", `{"status":"ready"}`},
 	}
 	for _, r := range routes {

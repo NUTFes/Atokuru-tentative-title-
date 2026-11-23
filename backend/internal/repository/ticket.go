@@ -78,3 +78,28 @@ func (r *TicketRepository) MaxReceivedOrderNumber(ctx context.Context, stallID u
 	).Scan(&maxNum).Error
 	return maxNum, err
 }
+
+// ListByStall は、その屋台の整理券のうち status が statuses のどれかのものを、order_number の順に最大 limit 件取る。
+func (r *TicketRepository) ListByStall(ctx context.Context, stallID uint, statuses []domain.TicketStatus, limit int, descending bool) ([]domain.Ticket, error) {
+	var tickets []domain.Ticket
+	err := r.listByStallQuery(ctx, stallID, statuses, limit, descending).Find(&tickets).Error
+	return tickets, err
+}
+
+// listByStallQuery は ListByStall のクエリを組み立てる（テストで EXPLAIN にかけるために分けている）。
+//
+// status を複数指定すると、SQLite は並べ替えを省くために (stall_id, order_number) のインデックスを選び、
+// 受け取り済みも含めた屋台の整理券を全部たどってしまう（10万件・ANALYZE 後でも同じ）。
+// Turso は読んだ行数で無料枠を消費するので、INDEXED BY で (stall_id, status, order_number) を使わせ、
+// 指定した status の行だけを読むようにする。
+func (r *TicketRepository) listByStallQuery(ctx context.Context, stallID uint, statuses []domain.TicketStatus, limit int, descending bool) *gorm.DB {
+	order := "order_number ASC"
+	if descending {
+		order = "order_number DESC"
+	}
+	return r.db.WithContext(ctx).
+		Table("tickets INDEXED BY idx_tickets_stall_status_order").
+		Where("stall_id = ? AND status IN ?", stallID, statuses).
+		Order(order).
+		Limit(limit)
+}

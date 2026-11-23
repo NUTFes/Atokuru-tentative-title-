@@ -4,6 +4,8 @@ import (
 	"context"
 	"testing"
 
+	"gorm.io/gorm"
+
 	"github.com/NUTFes/Atokuru-tentative-title-/backend/internal/domain"
 )
 
@@ -42,4 +44,13 @@ func TestMaxReceivedOrderNumber(t *testing.T) {
 
 	assertUsesIndex(t, gdb, "idx_tickets_stall_status_order",
 		"SELECT COALESCE(MAX(order_number), 0) FROM tickets WHERE stall_id = ? AND status = ?", s.ID, "received")
+}
+
+func TestListByStall_UsesIndex(t *testing.T) {
+	gdb := newTestDB(t)
+	tickets := NewTicketRepository(gdb)
+	stmt := tickets.listByStallQuery(context.Background(), 1, []domain.TicketStatus{"waiting", "ready"}, 100, false).
+		Session(&gorm.Session{DryRun: true}).
+		Find(&[]domain.Ticket{}).Statement
+	assertUsesIndex(t, gdb, "idx_tickets_stall_status_order", stmt.SQL.String(), stmt.Vars...)
 }
