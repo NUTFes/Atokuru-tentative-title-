@@ -107,6 +107,52 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/stalls/{stallId}/comment-templates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * 屋台の備考の定型文を一覧で取得する
+         * @description 模擬店が使う。登録した順（id の順）に返す。1店あたり最大 30 件。
+         */
+        get: operations["listCommentTemplates"];
+        put?: never;
+        /**
+         * 備考の定型文を登録する
+         * @description 模擬店が使う。登録したときに、サーバーが英語などに訳して `translations` に保存する。
+         *     訳せなかったとき（サーバーに翻訳の設定がない、翻訳の API が失敗したなど）も、訳なしで登録する。
+         *     同じ屋台に同じ文がすでにあるときと、1店あたりの上限（30 件）を超えるときは 409（`code: conflict`）を返す。
+         */
+        post: operations["createCommentTemplate"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/comment-templates/{templateId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * 備考の定型文を削除する
+         * @description 模擬店が使う。間違えて登録したとき用。発券済みの整理券の備考と訳はそのまま残る。
+         */
+        delete: operations["deleteCommentTemplate"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/tickets/{publicToken}": {
         parameters: {
             query?: never;
@@ -210,7 +256,7 @@ export interface components {
         };
         /**
          * @description 失敗したときに返す形。`code` はプログラムで見分けるため、`message` は人が読むための文。
-         *     code の種類：`bad_request` / `not_found` / `stall_not_open` / `push_unavailable` / `internal_error`
+         *     code の種類：`bad_request` / `not_found` / `stall_not_open` / `conflict` / `push_unavailable` / `internal_error`
          */
         Error: {
             /** @example not_found */
@@ -338,6 +384,7 @@ export interface components {
             status: components["schemas"]["TicketStatus"];
             /** @example 焼きそば 大盛り */
             comment: string | null;
+            comment_translations: components["schemas"]["Translations"];
             /** Format: date-time */
             called_at: string | null;
             /** Format: date-time */
@@ -354,6 +401,41 @@ export interface components {
              * @example 焼きそば 大盛り
              */
             comment?: string | null;
+        };
+        /**
+         * @description 訳。キーは言語コード（`locales/` のファイル名と同じ。今は `en`）、値は訳した文。
+         *     訳がないときは空のオブジェクト（`{}`）。
+         * @example {
+         *       "en": "Yakisoba, large"
+         *     }
+         */
+        Translations: {
+            [key: string]: string;
+        };
+        /** @description 備考の定型文 */
+        CommentTemplate: {
+            /**
+             * Format: int64
+             * @example 1
+             */
+            id: number;
+            /**
+             * Format: int64
+             * @example 1
+             */
+            stall_id: number;
+            /** @example 焼きそば 大盛り */
+            comment: string;
+            translations: components["schemas"]["Translations"];
+            /** Format: date-time */
+            created_at: string;
+        };
+        CreateCommentTemplateRequest: {
+            /**
+             * @description 定型文。前後の空白は取り除く。整理券の備考と同じく 200 文字まで
+             * @example 焼きそば 大盛り
+             */
+            comment: string;
         };
         UpdateTicketStatusRequest: {
             status: components["schemas"]["TicketStatus"];
@@ -636,6 +718,85 @@ export interface operations {
             400: components["responses"]["BadRequest"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    listCommentTemplates: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description 屋台の ID */
+                stallId: components["parameters"]["StallId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 定型文の一覧 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommentTemplate"][];
+                };
+            };
+            404: components["responses"]["NotFound"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    createCommentTemplate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description 屋台の ID */
+                stallId: components["parameters"]["StallId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateCommentTemplateRequest"];
+            };
+        };
+        responses: {
+            /** @description 登録した定型文 */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommentTemplate"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    deleteCommentTemplate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description 定型文の ID */
+                templateId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 削除した */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            404: components["responses"]["NotFound"];
             500: components["responses"]["InternalError"];
         };
     };

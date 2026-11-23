@@ -9,14 +9,15 @@ import (
 
 // Handler は全 API の実装をまとめる。
 type Handler struct {
-	stalls  *usecase.StallUsecase
-	tickets *usecase.TicketUsecase
-	push    *usecase.PushUsecase
+	stalls    *usecase.StallUsecase
+	tickets   *usecase.TicketUsecase
+	push      *usecase.PushUsecase
+	templates *usecase.CommentTemplateUsecase
 }
 
 // コンパイル時に、仕様書の全 API を実装しているかを確かめる。
 var _ gen.StrictServerInterface = (*Handler)(nil)
 
-func New(stalls *usecase.StallUsecase, tickets *usecase.TicketUsecase, push *usecase.PushUsecase) *Handler {
-	return &Handler{stalls: stalls, tickets: tickets, push: push}
+func New(stalls *usecase.StallUsecase, tickets *usecase.TicketUsecase, push *usecase.PushUsecase, templates *usecase.CommentTemplateUsecase) *Handler {
+	return &Handler{stalls: stalls, tickets: tickets, push: push, templates: templates}
 }

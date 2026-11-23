@@ -55,9 +55,29 @@ func toTicketDetail(d *usecase.TicketDetail) gen.TicketDetail {
 		OrderNumber: d.Ticket.OrderNumber,
 		Status:      gen.TicketStatus(d.Ticket.Status),
 		Comment:     d.Ticket.Comment,
-		CalledAt:    d.Ticket.CalledAt,
-		CreatedAt:   d.Ticket.CreatedAt,
-		PeopleAhead: d.PeopleAhead,
+		// 訳がないときも null ではなく {} にする（仕様書の Translations）。
+		CommentTranslations: toTranslations(d.Ticket.CommentTranslations),
+		CalledAt:            d.Ticket.CalledAt,
+		CreatedAt:           d.Ticket.CreatedAt,
+		PeopleAhead:         d.PeopleAhead,
+	}
+}
+
+func toTranslations(t domain.Translations) gen.Translations {
+	out := gen.Translations{}
+	for lang, s := range t {
+		out[lang] = s
+	}
+	return out
+}
+
+func toCommentTemplate(t *domain.CommentTemplate) gen.CommentTemplate {
+	return gen.CommentTemplate{
+		Id:           int64(t.ID),
+		StallId:      int64(t.StallID),
+		Comment:      t.Comment,
+		Translations: toTranslations(t.Translations),
+		CreatedAt:    t.CreatedAt,
 	}
 }
 

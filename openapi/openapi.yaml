@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: アトクル API
-  version: 0.3.0
+  version: 0.4.0
   description: |
     学園祭の模擬店の整理券を管理する API。
 
@@ -40,6 +40,13 @@ info:
     - `type`：`ready`（調理完了）か `near`（あと3人）
     - `people_ahead`：送った時点の前に何人。`ready` では 0
     - `url`：通知を押したときに開く URL
+
+    ## 備考の定型文と翻訳
+    店は、よく使う備考を定型文として登録できる（`/stalls/{stallId}/comment-templates`）。
+    登録したときに、サーバーが一度だけ英語などに訳して `translations` に保存する（来場者が見るたびには訳さない）。
+    発券したときの備考が、その屋台の定型文とまったく同じなら、定型文の訳を整理券にコピーし、
+    `GET /tickets/{publicToken}` の `comment_translations` で返す。FE は端末の言語の訳があればそれを、なければ `comment` を出す。
+    自由入力の備考は訳さない。サーバーに翻訳の設定がないときや、訳すのに失敗したときは、訳なし（`{}`）で保存する。
 # API はすべて /api の下に置く。それ以外の URL は Echo が FE の静的ファイルを返す。
 servers:
   - url: /api
@@ -50,6 +57,8 @@ tags:
     description: 屋台
   - name: tickets
     description: 整理券
+  - name: comment-templates
+    description: 備考の定型文
   - name: push
     description: 通知（Web Push）
 paths:
@@ -218,6 +227,81 @@ paths:
           $ref: "#/components/responses/NotFound"
         "409":
           $ref: "#/components/responses/Conflict"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /stalls/{stallId}/comment-templates:
+    get:
+      operationId: listCommentTemplates
+      summary: 屋台の備考の定型文を一覧で取得する
+      description: 模擬店が使う。登録した順（id の順）に返す。1店あたり最大 30 件。
+      tags: [comment-templates]
+      parameters:
+        - $ref: "#/components/parameters/StallId"
+      responses:
+        "200":
+          description: 定型文の一覧
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CommentTemplate"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+    post:
+      operationId: createCommentTemplate
+      summary: 備考の定型文を登録する
+      description: |
+        模擬店が使う。登録したときに、サーバーが英語などに訳して `translations` に保存する。
+        訳せなかったとき（サーバーに翻訳の設定がない、翻訳の API が失敗したなど）も、訳なしで登録する。
+        同じ屋台に同じ文がすでにあるときと、1店あたりの上限（30 件）を超えるときは 409（`code: conflict`）を返す。
+      tags: [comment-templates]
+      parameters:
+        - $ref: "#/components/parameters/StallId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateCommentTemplateRequest"
+      responses:
+        "201":
+          description: 登録した定型文
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CommentTemplate"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /comment-templates/{templateId}:
+    delete:
+      operationId: deleteCommentTemplate
+      summary: 備考の定型文を削除する
+      description: 模擬店が使う。間違えて登録したとき用。発券済みの整理券の備考と訳はそのまま残る。
+      tags: [comment-templates]
+      parameters:
+        - name: templateId
+          in: path
+          required: true
+          description: 定型文の ID
+          schema:
+            type: integer
+            format: int64
+      responses:
+        "204":
+          description: 削除した
+        "404":
+          $ref: "#/components/responses/NotFound"
         "500":
           $ref: "#/components/responses/InternalError"
 
@@ -413,7 +497,7 @@ components:
       type: object
       description: |
         失敗したときに返す形。`code` はプログラムで見分けるため、`message` は人が読むための文。
-        code の種類：`bad_request` / `not_found` / `stall_not_open` / `push_unavailable` / `internal_error`
+        code の種類：`bad_request` / `not_found` / `stall_not_open` / `conflict` / `push_unavailable` / `internal_error`
       required: [code, message]
       properties:
         code:
@@ -538,7 +622,7 @@ components:
     TicketDetail:
       type: object
       description: 整理券（来場者のユーザー画面で使う）。連番の id は返さない
-      required: [public_token, stall_id, stall_name, stall_number, order_number, status, comment, called_at, created_at, people_ahead]
+      required: [public_token, stall_id, stall_name, stall_number, order_number, status, comment, comment_translations, called_at, created_at, people_ahead]
       properties:
         public_token:
           type: string
@@ -562,6 +646,8 @@ components:
           type: string
           nullable: true
           example: 焼きそば 大盛り
+        comment_translations:
+          $ref: "#/components/schemas/Translations"
         called_at:
           type: string
           format: date-time
@@ -583,6 +669,49 @@ components:
           nullable: true
           maxLength: 200
           description: 備考（メニューなど）。なければ省略するか null
+          example: 焼きそば 大盛り
+
+    Translations:
+      type: object
+      description: |
+        訳。キーは言語コード（`locales/` のファイル名と同じ。今は `en`）、値は訳した文。
+        訳がないときは空のオブジェクト（`{}`）。
+      additionalProperties:
+        type: string
+      example:
+        en: Yakisoba, large
+
+    CommentTemplate:
+      type: object
+      description: 備考の定型文
+      required: [id, stall_id, comment, translations, created_at]
+      properties:
+        id:
+          type: integer
+          format: int64
+          example: 1
+        stall_id:
+          type: integer
+          format: int64
+          example: 1
+        comment:
+          type: string
+          example: 焼きそば 大盛り
+        translations:
+          $ref: "#/components/schemas/Translations"
+        created_at:
+          type: string
+          format: date-time
+
+    CreateCommentTemplateRequest:
+      type: object
+      required: [comment]
+      properties:
+        comment:
+          type: string
+          minLength: 1
+          maxLength: 200
+          description: 定型文。前後の空白は取り除く。整理券の備考と同じく 200 文字まで
           example: 焼きそば 大盛り
 
     UpdateTicketStatusRequest:

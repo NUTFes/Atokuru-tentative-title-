@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -29,15 +30,28 @@ const createRetries = 5
 // 番号を決めるのと書き込むのを1つの INSERT 文で行うので、SQLite（Turso）が書き込みを1つずつ
 // 順番に処理する限り、同時に発券されても番号は重複しない。万一ぶつかっても、
 // (stall_id, order_number) の複合ユニークで弾かれるので、そのときはやり直す。
-func (r *TicketRepository) Create(ctx context.Context, stallID uint, publicToken string, comment *string) (*domain.Ticket, error) {
+//
+// commentTranslations は備考の訳（定型文からコピーしたもの）。なければ nil。
+func (r *TicketRepository) Create(ctx context.Context, stallID uint, publicToken string, comment *string, commentTranslations domain.Translations) (*domain.Ticket, error) {
+	// 1つの INSERT 文で書くので、GORM の serializer は通らない。自分で JSON にする。
+	var translations *string
+	if len(commentTranslations) > 0 {
+		b, err := json.Marshal(commentTranslations)
+		if err != nil {
+			return nil, err
+		}
+		s := string(b)
+		translations = &s
+	}
+
 	var lastErr error
 	for i := 0; i < createRetries; i++ {
 		now := time.Now()
 		err := r.db.WithContext(ctx).Exec(`
-			INSERT INTO tickets (public_token, stall_id, order_number, status, comment, created_at, updated_at)
-			SELECT ?, ?, COALESCE(MAX(order_number), 0) + 1, ?, ?, ?, ?
+			INSERT INTO tickets (public_token, stall_id, order_number, status, comment, comment_translations, created_at, updated_at)
+			SELECT ?, ?, COALESCE(MAX(order_number), 0) + 1, ?, ?, ?, ?, ?
 			FROM tickets WHERE stall_id = ?`,
-			publicToken, stallID, string(domain.TicketStatusWaiting), comment, now, now, stallID,
+			publicToken, stallID, string(domain.TicketStatusWaiting), comment, translations, now, now, stallID,
 		).Error
 		if err == nil {
 			return r.FindByPublicToken(ctx, publicToken)

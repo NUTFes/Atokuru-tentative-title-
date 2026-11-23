@@ -128,10 +128,38 @@ func (e ListStallTicketsParamsOrder) Valid() bool {
 // Example: open
 type BusinessStatus string
 
+// CommentTemplate 備考の定型文
+type CommentTemplate struct {
+	// Comment Example: 焼きそば 大盛り
+	Comment   string    `json:"comment"`
+	CreatedAt time.Time `json:"created_at"`
+
+	// Id Example: 1
+	Id int64 `json:"id"`
+
+	// StallId Example: 1
+	StallId int64 `json:"stall_id"`
+
+	// Translations 訳。キーは言語コード（`locales/` のファイル名と同じ。今は `en`）、値は訳した文。
+	// 訳がないときは空のオブジェクト（`{}`）。
+	//
+	//
+	// Example: {"en":"Yakisoba, large"}
+	Translations Translations `json:"translations"`
+}
+
 // Congestion 混雑度。red / yellow / green / gray（営業中でない店は gray）
 //
 // Example: green
 type Congestion string
+
+// CreateCommentTemplateRequest defines model for CreateCommentTemplateRequest.
+type CreateCommentTemplateRequest struct {
+	// Comment 定型文。前後の空白は取り除く。整理券の備考と同じく 200 文字まで
+	//
+	// Example: 焼きそば 大盛り
+	Comment string `json:"comment"`
+}
 
 // CreateTicketRequest defines model for CreateTicketRequest.
 type CreateTicketRequest struct {
@@ -142,7 +170,7 @@ type CreateTicketRequest struct {
 }
 
 // Error 失敗したときに返す形。`code` はプログラムで見分けるため、`message` は人が読むための文。
-// code の種類：`bad_request` / `not_found` / `stall_not_open` / `push_unavailable` / `internal_error`
+// code の種類：`bad_request` / `not_found` / `stall_not_open` / `conflict` / `push_unavailable` / `internal_error`
 type Error struct {
 	// Code Example: not_found
 	Code string `json:"code"`
@@ -276,8 +304,15 @@ type TicketDetail struct {
 	CalledAt *time.Time `json:"called_at"`
 
 	// Comment Example: 焼きそば 大盛り
-	Comment   *string   `json:"comment"`
-	CreatedAt time.Time `json:"created_at"`
+	Comment *string `json:"comment"`
+
+	// CommentTranslations 訳。キーは言語コード（`locales/` のファイル名と同じ。今は `en`）、値は訳した文。
+	// 訳がないときは空のオブジェクト（`{}`）。
+	//
+	//
+	// Example: {"en":"Yakisoba, large"}
+	CommentTranslations Translations `json:"comment_translations"`
+	CreatedAt           time.Time    `json:"created_at"`
 
 	// OrderNumber Example: 42
 	OrderNumber int `json:"order_number"`
@@ -310,6 +345,12 @@ type TicketDetail struct {
 // Example: waiting
 type TicketStatus string
 
+// Translations 訳。キーは言語コード（`locales/` のファイル名と同じ。今は `en`）、値は訳した文。
+// 訳がないときは空のオブジェクト（`{}`）。
+//
+// Example: {"en":"Yakisoba, large"}
+type Translations map[string]string
+
 // UpdateBusinessStatusRequest defines model for UpdateBusinessStatusRequest.
 type UpdateBusinessStatusRequest struct {
 	// BusinessStatus 屋台の営業状況。open（営業中）/ preparing（準備中）/ sold_out（売り切れ）/ closed（閉店）
@@ -338,23 +379,23 @@ type VapidPublicKey struct {
 type StallId = int64
 
 // BadRequest 失敗したときに返す形。`code` はプログラムで見分けるため、`message` は人が読むための文。
-// code の種類：`bad_request` / `not_found` / `stall_not_open` / `push_unavailable` / `internal_error`
+// code の種類：`bad_request` / `not_found` / `stall_not_open` / `conflict` / `push_unavailable` / `internal_error`
 type BadRequest = Error
 
 // Conflict 失敗したときに返す形。`code` はプログラムで見分けるため、`message` は人が読むための文。
-// code の種類：`bad_request` / `not_found` / `stall_not_open` / `push_unavailable` / `internal_error`
+// code の種類：`bad_request` / `not_found` / `stall_not_open` / `conflict` / `push_unavailable` / `internal_error`
 type Conflict = Error
 
 // InternalError 失敗したときに返す形。`code` はプログラムで見分けるため、`message` は人が読むための文。
-// code の種類：`bad_request` / `not_found` / `stall_not_open` / `push_unavailable` / `internal_error`
+// code の種類：`bad_request` / `not_found` / `stall_not_open` / `conflict` / `push_unavailable` / `internal_error`
 type InternalError = Error
 
 // NotFound 失敗したときに返す形。`code` はプログラムで見分けるため、`message` は人が読むための文。
-// code の種類：`bad_request` / `not_found` / `stall_not_open` / `push_unavailable` / `internal_error`
+// code の種類：`bad_request` / `not_found` / `stall_not_open` / `conflict` / `push_unavailable` / `internal_error`
 type NotFound = Error
 
 // PushUnavailable 失敗したときに返す形。`code` はプログラムで見分けるため、`message` は人が読むための文。
-// code の種類：`bad_request` / `not_found` / `stall_not_open` / `push_unavailable` / `internal_error`
+// code の種類：`bad_request` / `not_found` / `stall_not_open` / `conflict` / `push_unavailable` / `internal_error`
 type PushUnavailable = Error
 
 // ListStallTicketsParams defines parameters for ListStallTickets.
@@ -375,6 +416,9 @@ type ListStallTicketsParamsOrder string
 // UpdateBusinessStatusJSONRequestBody defines body for UpdateBusinessStatus for application/json ContentType.
 type UpdateBusinessStatusJSONRequestBody = UpdateBusinessStatusRequest
 
+// CreateCommentTemplateJSONRequestBody defines body for CreateCommentTemplate for application/json ContentType.
+type CreateCommentTemplateJSONRequestBody = CreateCommentTemplateRequest
+
 // CreateTicketJSONRequestBody defines body for CreateTicket for application/json ContentType.
 type CreateTicketJSONRequestBody = CreateTicketRequest
 
@@ -386,6 +430,9 @@ type UpdateTicketStatusJSONRequestBody = UpdateTicketStatusRequest
 
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
+	// DeleteCommentTemplate 備考の定型文を削除する
+	// (DELETE /comment-templates/{templateId})
+	DeleteCommentTemplate(ctx echo.Context, templateId int64) error
 	// GetHealth サーバーが動いているかを確認する
 	// (GET /health)
 	GetHealth(ctx echo.Context) error
@@ -401,6 +448,12 @@ type ServerInterface interface {
 	// UpdateBusinessStatus 指定した屋台の営業状況を変更する
 	// (PATCH /stalls/{stallId}/business-status)
 	UpdateBusinessStatus(ctx echo.Context, stallId StallId) error
+	// ListCommentTemplates 屋台の備考の定型文を一覧で取得する
+	// (GET /stalls/{stallId}/comment-templates)
+	ListCommentTemplates(ctx echo.Context, stallId StallId) error
+	// CreateCommentTemplate 備考の定型文を登録する
+	// (POST /stalls/{stallId}/comment-templates)
+	CreateCommentTemplate(ctx echo.Context, stallId StallId) error
 	// ListStallTickets 指定した屋台の整理券の一覧を取得する
 	// (GET /stalls/{stallId}/tickets)
 	ListStallTickets(ctx echo.Context, stallId StallId, params ListStallTicketsParams) error
@@ -421,6 +474,22 @@ type ServerInterface interface {
 // ServerInterfaceWrapper converts echo contexts to parameters.
 type ServerInterfaceWrapper struct {
 	Handler ServerInterface
+}
+
+// DeleteCommentTemplate converts echo context to params.
+func (w *ServerInterfaceWrapper) DeleteCommentTemplate(ctx echo.Context) error {
+	var err error
+	// ------------- Path parameter "templateId" -------------
+	var templateId int64
+
+	err = runtime.BindStyledParameterWithOptions("simple", "templateId", ctx.Param("templateId"), &templateId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "int64", ValueIsUnescaped: ctx.Request().URL.RawPath == ""})
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Invalid format for parameter templateId: %s", err))
+	}
+
+	// Invoke the callback with all the unmarshaled arguments
+	err = w.Handler.DeleteCommentTemplate(ctx, templateId)
+	return err
 }
 
 // GetHealth converts echo context to params.
@@ -479,6 +548,38 @@ func (w *ServerInterfaceWrapper) UpdateBusinessStatus(ctx echo.Context) error {
 
 	// Invoke the callback with all the unmarshaled arguments
 	err = w.Handler.UpdateBusinessStatus(ctx, stallId)
+	return err
+}
+
+// ListCommentTemplates converts echo context to params.
+func (w *ServerInterfaceWrapper) ListCommentTemplates(ctx echo.Context) error {
+	var err error
+	// ------------- Path parameter "stallId" -------------
+	var stallId StallId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "stallId", ctx.Param("stallId"), &stallId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "int64", ValueIsUnescaped: ctx.Request().URL.RawPath == ""})
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Invalid format for parameter stallId: %s", err))
+	}
+
+	// Invoke the callback with all the unmarshaled arguments
+	err = w.Handler.ListCommentTemplates(ctx, stallId)
+	return err
+}
+
+// CreateCommentTemplate converts echo context to params.
+func (w *ServerInterfaceWrapper) CreateCommentTemplate(ctx echo.Context) error {
+	var err error
+	// ------------- Path parameter "stallId" -------------
+	var stallId StallId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "stallId", ctx.Param("stallId"), &stallId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "int64", ValueIsUnescaped: ctx.Request().URL.RawPath == ""})
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Invalid format for parameter stallId: %s", err))
+	}
+
+	// Invoke the callback with all the unmarshaled arguments
+	err = w.Handler.CreateCommentTemplate(ctx, stallId)
 	return err
 }
 
@@ -638,6 +739,9 @@ func RegisterHandlersWithOptions(router EchoRouter, si ServerInterface, options 
 	router.PATCH(options.BaseURL+"/stalls/:stallId/business-status", wrapper.UpdateBusinessStatus, options.OperationMiddlewares["updateBusinessStatus"]...)
 	router.GET(options.BaseURL+"/stalls/:stallId/tickets", wrapper.ListStallTickets, options.OperationMiddlewares["listStallTickets"]...)
 	router.POST(options.BaseURL+"/stalls/:stallId/tickets", wrapper.CreateTicket, options.OperationMiddlewares["createTicket"]...)
+	router.GET(options.BaseURL+"/stalls/:stallId/comment-templates", wrapper.ListCommentTemplates, options.OperationMiddlewares["listCommentTemplates"]...)
+	router.POST(options.BaseURL+"/stalls/:stallId/comment-templates", wrapper.CreateCommentTemplate, options.OperationMiddlewares["createCommentTemplate"]...)
+	router.DELETE(options.BaseURL+"/comment-templates/:templateId", wrapper.DeleteCommentTemplate, options.OperationMiddlewares["deleteCommentTemplate"]...)
 	router.GET(options.BaseURL+"/tickets/:publicToken", wrapper.GetTicket, options.OperationMiddlewares["getTicket"]...)
 	router.PATCH(options.BaseURL+"/tickets/:ticketId/status", wrapper.UpdateTicketStatus, options.OperationMiddlewares["updateTicketStatus"]...)
 	router.GET(options.BaseURL+"/push/vapid-public-key", wrapper.GetVapidPublicKey, options.OperationMiddlewares["getVapidPublicKey"]...)
@@ -654,6 +758,50 @@ type InternalErrorJSONResponse Error
 type NotFoundJSONResponse Error
 
 type PushUnavailableJSONResponse Error
+
+type DeleteCommentTemplateRequestObject struct {
+	TemplateId int64 `json:"templateId"`
+}
+
+type DeleteCommentTemplateResponseObject interface {
+	VisitDeleteCommentTemplateResponse(w http.ResponseWriter) error
+}
+
+type DeleteCommentTemplate204Response struct {
+}
+
+func (response DeleteCommentTemplate204Response) VisitDeleteCommentTemplateResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type DeleteCommentTemplate404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response DeleteCommentTemplate404JSONResponse) VisitDeleteCommentTemplateResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteCommentTemplate500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response DeleteCommentTemplate500JSONResponse) VisitDeleteCommentTemplateResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
 
 type GetHealthRequestObject struct {
 }
@@ -878,6 +1026,135 @@ func (response UpdateBusinessStatus404JSONResponse) VisitUpdateBusinessStatusRes
 type UpdateBusinessStatus500JSONResponse struct{ InternalErrorJSONResponse }
 
 func (response UpdateBusinessStatus500JSONResponse) VisitUpdateBusinessStatusResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListCommentTemplatesRequestObject struct {
+	StallId StallId `json:"stallId"`
+}
+
+type ListCommentTemplatesResponseObject interface {
+	VisitListCommentTemplatesResponse(w http.ResponseWriter) error
+}
+
+type ListCommentTemplates200JSONResponse []CommentTemplate
+
+func (response ListCommentTemplates200JSONResponse) VisitListCommentTemplatesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListCommentTemplates404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response ListCommentTemplates404JSONResponse) VisitListCommentTemplatesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListCommentTemplates500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response ListCommentTemplates500JSONResponse) VisitListCommentTemplatesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateCommentTemplateRequestObject struct {
+	StallId StallId `json:"stallId"`
+	Body    *CreateCommentTemplateJSONRequestBody
+}
+
+type CreateCommentTemplateResponseObject interface {
+	VisitCreateCommentTemplateResponse(w http.ResponseWriter) error
+}
+
+type CreateCommentTemplate201JSONResponse CommentTemplate
+
+func (response CreateCommentTemplate201JSONResponse) VisitCreateCommentTemplateResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateCommentTemplate400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response CreateCommentTemplate400JSONResponse) VisitCreateCommentTemplateResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateCommentTemplate404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response CreateCommentTemplate404JSONResponse) VisitCreateCommentTemplateResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateCommentTemplate409JSONResponse struct{ ConflictJSONResponse }
+
+func (response CreateCommentTemplate409JSONResponse) VisitCreateCommentTemplateResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateCommentTemplate500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response CreateCommentTemplate500JSONResponse) VisitCreateCommentTemplateResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response); err != nil {
@@ -1209,6 +1486,9 @@ func (response UpdateTicketStatus500JSONResponse) VisitUpdateTicketStatusRespons
 
 // StrictServerInterface represents all server handlers.
 type StrictServerInterface interface {
+	// DeleteCommentTemplate 備考の定型文を削除する
+	// (DELETE /comment-templates/{templateId})
+	DeleteCommentTemplate(ctx context.Context, request DeleteCommentTemplateRequestObject) (DeleteCommentTemplateResponseObject, error)
 	// GetHealth サーバーが動いているかを確認する
 	// (GET /health)
 	GetHealth(ctx context.Context, request GetHealthRequestObject) (GetHealthResponseObject, error)
@@ -1224,6 +1504,12 @@ type StrictServerInterface interface {
 	// UpdateBusinessStatus 指定した屋台の営業状況を変更する
 	// (PATCH /stalls/{stallId}/business-status)
 	UpdateBusinessStatus(ctx context.Context, request UpdateBusinessStatusRequestObject) (UpdateBusinessStatusResponseObject, error)
+	// ListCommentTemplates 屋台の備考の定型文を一覧で取得する
+	// (GET /stalls/{stallId}/comment-templates)
+	ListCommentTemplates(ctx context.Context, request ListCommentTemplatesRequestObject) (ListCommentTemplatesResponseObject, error)
+	// CreateCommentTemplate 備考の定型文を登録する
+	// (POST /stalls/{stallId}/comment-templates)
+	CreateCommentTemplate(ctx context.Context, request CreateCommentTemplateRequestObject) (CreateCommentTemplateResponseObject, error)
 	// ListStallTickets 指定した屋台の整理券の一覧を取得する
 	// (GET /stalls/{stallId}/tickets)
 	ListStallTickets(ctx context.Context, request ListStallTicketsRequestObject) (ListStallTicketsResponseObject, error)
@@ -1251,6 +1537,31 @@ func NewStrictHandler(ssi StrictServerInterface, middlewares []StrictMiddlewareF
 type strictHandler struct {
 	ssi         StrictServerInterface
 	middlewares []StrictMiddlewareFunc
+}
+
+// DeleteCommentTemplate operation middleware
+func (sh *strictHandler) DeleteCommentTemplate(ctx echo.Context, templateId int64) error {
+	var request DeleteCommentTemplateRequestObject
+
+	request.TemplateId = templateId
+
+	handler := func(ctx echo.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.DeleteCommentTemplate(ctx.Request().Context(), request.(DeleteCommentTemplateRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DeleteCommentTemplate")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		return err
+	} else if validResponse, ok := response.(DeleteCommentTemplateResponseObject); ok {
+		return validResponse.VisitDeleteCommentTemplateResponse(ctx.Response())
+	} else if response != nil {
+		return fmt.Errorf("unexpected response type: %T", response)
+	}
+	return nil
 }
 
 // GetHealth operation middleware
@@ -1389,6 +1700,79 @@ func (sh *strictHandler) UpdateBusinessStatus(ctx echo.Context, stallId StallId)
 		return err
 	} else if validResponse, ok := response.(UpdateBusinessStatusResponseObject); ok {
 		return validResponse.VisitUpdateBusinessStatusResponse(ctx.Response())
+	} else if response != nil {
+		return fmt.Errorf("unexpected response type: %T", response)
+	}
+	return nil
+}
+
+// ListCommentTemplates operation middleware
+func (sh *strictHandler) ListCommentTemplates(ctx echo.Context, stallId StallId) error {
+	var request ListCommentTemplatesRequestObject
+
+	request.StallId = stallId
+
+	handler := func(ctx echo.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.ListCommentTemplates(ctx.Request().Context(), request.(ListCommentTemplatesRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListCommentTemplates")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		return err
+	} else if validResponse, ok := response.(ListCommentTemplatesResponseObject); ok {
+		return validResponse.VisitListCommentTemplatesResponse(ctx.Response())
+	} else if response != nil {
+		return fmt.Errorf("unexpected response type: %T", response)
+	}
+	return nil
+}
+
+// CreateCommentTemplate operation middleware
+func (sh *strictHandler) CreateCommentTemplate(ctx echo.Context, stallId StallId) error {
+	var request CreateCommentTemplateRequestObject
+
+	request.StallId = stallId
+
+	var body CreateCommentTemplateJSONRequestBody
+	var err error
+	if binder, ok := ctx.Echo().Binder.(*echo.DefaultBinder); ok {
+		// A request validator built on kin-openapi's openapi3filter with
+		// KeepValidatedValue leaves the value it validated on the body. Bind
+		// that value, matching member names exactly, so the handler receives
+		// what was validated instead of a second, case-insensitive decode.
+		// Otherwise bind only the request body, so that path and query
+		// parameters are not also bound into the body struct.
+		if vb, ok := ctx.Request().Body.(interface{ ValidatedValue() any }); !ok || runtime.BindJSONValue(vb.ValidatedValue(), &body) != nil {
+			err = binder.BindBody(ctx, &body)
+		}
+	} else {
+		// A custom binder is installed on the Echo instance; defer to it
+		// entirely, since echo.Binder does not expose body-only binding and
+		// the binder may do more than decode (for example call ctx.Validate).
+		err = ctx.Bind(&body)
+	}
+	if err != nil {
+		return err
+	}
+	request.Body = &body
+
+	handler := func(ctx echo.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.CreateCommentTemplate(ctx.Request().Context(), request.(CreateCommentTemplateRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CreateCommentTemplate")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		return err
+	} else if validResponse, ok := response.(CreateCommentTemplateResponseObject); ok {
+		return validResponse.VisitCreateCommentTemplateResponse(ctx.Response())
 	} else if response != nil {
 		return fmt.Errorf("unexpected response type: %T", response)
 	}
@@ -1595,93 +1979,108 @@ func (sh *strictHandler) UpdateTicketStatus(ctx echo.Context, ticketId int64) er
 // const string: with thousands of chunks the chained `+` fold is several
 // times slower for the Go compiler than parsing a slice literal.
 var swaggerSpec = []string{
-	"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",
+	"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",
 }
 
 // decodeSpec returns the embedded OpenAPI spec as raw JSON bytes,

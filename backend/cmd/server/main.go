@@ -18,6 +18,7 @@ import (
 	"github.com/NUTFes/Atokuru-tentative-title-/backend/internal/handler"
 	"github.com/NUTFes/Atokuru-tentative-title-/backend/internal/infra/db"
 	"github.com/NUTFes/Atokuru-tentative-title-/backend/internal/infra/notify"
+	"github.com/NUTFes/Atokuru-tentative-title-/backend/internal/infra/translate"
 	"github.com/NUTFes/Atokuru-tentative-title-/backend/internal/repository"
 	"github.com/NUTFes/Atokuru-tentative-title-/backend/internal/usecase"
 )
@@ -43,9 +44,11 @@ func main() {
 	stallRepo := repository.NewStallRepository(gdb)
 	ticketRepo := repository.NewTicketRepository(gdb)
 	pushRepo := repository.NewPushSubscriptionRepository(gdb)
+	templateRepo := repository.NewCommentTemplateRepository(gdb)
 	stallUsecase := usecase.NewStallUsecase(stallRepo)
-	ticketUsecase := usecase.NewTicketUsecase(stallRepo, ticketRepo, pushRepo, sender)
+	ticketUsecase := usecase.NewTicketUsecase(stallRepo, ticketRepo, pushRepo, templateRepo, sender)
 	pushUsecase := usecase.NewPushUsecase(ticketRepo, pushRepo, vapid.enabledPublicKey())
+	templateUsecase := usecase.NewCommentTemplateUsecase(stallRepo, templateRepo, newTranslator())
 
 	e := echo.New()
 	e.HideBanner = true
@@ -54,7 +57,7 @@ func main() {
 	e.Use(middleware.Recover())
 
 	// API はすべて /api の下に置く（openapi.yaml の servers と合わせる）。
-	h := handler.New(stallUsecase, ticketUsecase, pushUsecase)
+	h := handler.New(stallUsecase, ticketUsecase, pushUsecase, templateUsecase)
 	gen.RegisterHandlersWithBaseURL(e, gen.NewStrictHandler(h, nil), "/api")
 
 	// /api 以外の URL では FE（Next.js の静的エクスポート）のファイルを返す。
@@ -113,4 +116,15 @@ func (c vapidConfig) enabledPublicKey() string {
 		return ""
 	}
 	return c.publicKey
+}
+
+// newTranslator は、備考の定型文を訳す OpenAI の設定（OPENAI_API_KEY と OPENAI_MODEL）がそろっていれば、
+// 翻訳の実装を返す。そろっていなければ nil を返し、定型文を訳さずに登録する。
+func newTranslator() usecase.Translator {
+	key, model := os.Getenv("OPENAI_API_KEY"), os.Getenv("OPENAI_MODEL")
+	if key == "" || model == "" {
+		log.Print("OPENAI_API_KEY・OPENAI_MODEL がそろっていないので、備考の定型文は訳さずに登録します")
+		return nil
+	}
+	return translate.NewOpenAI(key, model)
 }

@@ -22,6 +22,7 @@ type TicketUsecase struct {
 	stalls        *repository.StallRepository
 	tickets       *repository.TicketRepository
 	subscriptions *repository.PushSubscriptionRepository
+	templates     *repository.CommentTemplateRepository
 	// sender は通知を送る。nil なら通知を送らない（VAPID の鍵を設定していないとき）。
 	sender PushSender
 	// runAsync は通知の送信を、status の変更のレスポンスを返したあとに動かす。テストでは、すぐに動かすものに差し替える。
@@ -29,11 +30,12 @@ type TicketUsecase struct {
 }
 
 // NewTicketUsecase を作る。sender が nil なら通知は送らない。
-func NewTicketUsecase(stalls *repository.StallRepository, tickets *repository.TicketRepository, subscriptions *repository.PushSubscriptionRepository, sender PushSender) *TicketUsecase {
+func NewTicketUsecase(stalls *repository.StallRepository, tickets *repository.TicketRepository, subscriptions *repository.PushSubscriptionRepository, templates *repository.CommentTemplateRepository, sender PushSender) *TicketUsecase {
 	return &TicketUsecase{
 		stalls:        stalls,
 		tickets:       tickets,
 		subscriptions: subscriptions,
+		templates:     templates,
 		sender:        sender,
 		runAsync:      func(f func()) { go f() },
 	}
@@ -54,11 +56,32 @@ func (u *TicketUsecase) Create(ctx context.Context, stallID uint, comment *strin
 		return nil, err
 	}
 
+	translations, err := u.commentTranslations(ctx, stallID, comment)
+	if err != nil {
+		return nil, err
+	}
+
 	token, err := newPublicToken()
 	if err != nil {
 		return nil, err
 	}
-	return u.tickets.Create(ctx, stallID, token, comment)
+	return u.tickets.Create(ctx, stallID, token, comment, translations)
+}
+
+// commentTranslations は、備考がその屋台の定型文とまったく同じなら、定型文の訳を返す。
+// 整理券にコピーしておくので、来場者が整理券を開くたびに定型文を探さなくてよい。自由入力の備考は訳さない。
+func (u *TicketUsecase) commentTranslations(ctx context.Context, stallID uint, comment *string) (domain.Translations, error) {
+	if comment == nil {
+		return nil, nil
+	}
+	t, err := u.templates.FindByComment(ctx, stallID, *comment)
+	if errors.Is(err, domain.ErrNotFound) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return t.Translations, nil
 }
 
 // normalizeComment は備考の前後の空白を取り、空なら null にする。長すぎるときはエラーにする。

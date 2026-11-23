@@ -101,7 +101,7 @@ func newNotifyFixture(t *testing.T, n int) *notifyFixture {
 	ticketRepo := repository.NewTicketRepository(gdb)
 	pushRepo := repository.NewPushSubscriptionRepository(gdb)
 	sender := &fakeSender{gone: map[string]bool{}}
-	u := NewTicketUsecase(stallRepo, ticketRepo, pushRepo, sender)
+	u := NewTicketUsecase(stallRepo, ticketRepo, pushRepo, repository.NewCommentTemplateRepository(gdb), sender)
 	u.runAsync = func(f func()) { f() }
 
 	stall := &domain.Stall{Name: "焼きそば研究会", StallNumber: "A-01", BusinessStatus: domain.BusinessStatusOpen}

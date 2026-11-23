@@ -67,7 +67,7 @@ func TestClaimNearNotification(t *testing.T) {
 		t.Fatal(err)
 	}
 	for i := 1; i <= 6; i++ {
-		if _, err := tickets.Create(ctx, stall.ID, "token"+strconv.Itoa(i), nil); err != nil {
+		if _, err := tickets.Create(ctx, stall.ID, "token"+strconv.Itoa(i), nil, nil); err != nil {
 			t.Fatal(err)
 		}
 	}
