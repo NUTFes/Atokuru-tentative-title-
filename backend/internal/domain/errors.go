@@ -25,3 +25,7 @@ func StallNotOpen(message string) error { return &Error{Kind: ErrStallNotOpen, M
 func PushUnavailable(message string) error {
 	return &Error{Kind: ErrPushUnavailable, Message: message}
 }
+
+// ErrPushSubscriptionGone は、プッシュサーバーが「この購読はもう使えない」（404・410）と返したことを表す。
+// 通知の送信（infra/notify）が返し、usecase はその購読を消す。HTTP のレスポンスには使わない。
+var ErrPushSubscriptionGone = errors.New("push_subscription_gone")

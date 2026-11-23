@@ -26,3 +26,19 @@ func (r *PushSubscriptionRepository) Upsert(ctx context.Context, s *domain.PushS
 		DoUpdates: clause.AssignmentColumns([]string{"p256dh", "auth", "updated_at"}),
 	}).Omit(clause.Associations).Create(s).Error
 }
+
+// ListByTicketIDs は、指定した整理券の購読をすべて取る。
+// (ticket_id, endpoint) のユニークインデックスの先頭が ticket_id なので、全件は読まない。
+func (r *PushSubscriptionRepository) ListByTicketIDs(ctx context.Context, ticketIDs []uint) ([]domain.PushSubscription, error) {
+	if len(ticketIDs) == 0 {
+		return nil, nil
+	}
+	var subs []domain.PushSubscription
+	err := r.db.WithContext(ctx).Where("ticket_id IN ?", ticketIDs).Order("id").Find(&subs).Error
+	return subs, err
+}
+
+// Delete は購読を1件消す。もうないときもエラーにしない。
+func (r *PushSubscriptionRepository) Delete(ctx context.Context, id uint) error {
+	return r.db.WithContext(ctx).Delete(&domain.PushSubscription{}, id).Error
+}

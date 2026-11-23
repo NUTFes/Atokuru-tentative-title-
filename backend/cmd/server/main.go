@@ -17,6 +17,7 @@ import (
 	"github.com/NUTFes/Atokuru-tentative-title-/backend/internal/gen"
 	"github.com/NUTFes/Atokuru-tentative-title-/backend/internal/handler"
 	"github.com/NUTFes/Atokuru-tentative-title-/backend/internal/infra/db"
+	"github.com/NUTFes/Atokuru-tentative-title-/backend/internal/infra/notify"
 	"github.com/NUTFes/Atokuru-tentative-title-/backend/internal/repository"
 	"github.com/NUTFes/Atokuru-tentative-title-/backend/internal/usecase"
 )
@@ -30,12 +31,21 @@ func main() {
 		log.Fatal(err)
 	}
 
+	// 通知（Web Push）は、VAPID の鍵が3つそろっているときだけ使う。
+	vapid := loadVAPID()
+	var sender usecase.PushSender
+	if vapid.enabled() {
+		sender = notify.NewWebPush(vapid.publicKey, vapid.privateKey, vapid.subject)
+	} else {
+		log.Print("VAPID_PUBLIC_KEY・VAPID_PRIVATE_KEY・VAPID_SUBJECT がそろっていないので、通知（Web Push）は使いません")
+	}
+
 	stallRepo := repository.NewStallRepository(gdb)
 	ticketRepo := repository.NewTicketRepository(gdb)
-	stallUsecase := usecase.NewStallUsecase(stallRepo)
-	ticketUsecase := usecase.NewTicketUsecase(stallRepo, ticketRepo)
 	pushRepo := repository.NewPushSubscriptionRepository(gdb)
-	pushUsecase := usecase.NewPushUsecase(ticketRepo, pushRepo, vapidPublicKey())
+	stallUsecase := usecase.NewStallUsecase(stallRepo)
+	ticketUsecase := usecase.NewTicketUsecase(stallRepo, ticketRepo, pushRepo, sender)
+	pushUsecase := usecase.NewPushUsecase(ticketRepo, pushRepo, vapid.enabledPublicKey())
 
 	e := echo.New()
 	e.HideBanner = true
@@ -79,13 +89,28 @@ func main() {
 	}
 }
 
-// vapidPublicKey は、通知（Web Push）に使う VAPID の鍵が環境変数にそろっていれば公開鍵を返す。
-// 1つでも欠けていれば空を返し、通知を使わずに動かす（ローカル開発で鍵がなくても困らないように）。
-func vapidPublicKey() string {
-	pub := os.Getenv("VAPID_PUBLIC_KEY")
-	if pub == "" || os.Getenv("VAPID_PRIVATE_KEY") == "" || os.Getenv("VAPID_SUBJECT") == "" {
-		log.Print("VAPID_PUBLIC_KEY・VAPID_PRIVATE_KEY・VAPID_SUBJECT がそろっていないので、通知（Web Push）は使いません")
+// vapidConfig は、通知（Web Push）に使う VAPID の鍵と連絡先。
+type vapidConfig struct {
+	publicKey, privateKey, subject string
+}
+
+func loadVAPID() vapidConfig {
+	return vapidConfig{
+		publicKey:  os.Getenv("VAPID_PUBLIC_KEY"),
+		privateKey: os.Getenv("VAPID_PRIVATE_KEY"),
+		subject:    os.Getenv("VAPID_SUBJECT"),
+	}
+}
+
+// enabled は3つそろっているかを返す。1つでも欠けていれば通知を使わずに動かす（ローカル開発で鍵がなくても困らないように）。
+func (c vapidConfig) enabled() bool {
+	return c.publicKey != "" && c.privateKey != "" && c.subject != ""
+}
+
+// enabledPublicKey は、通知を使うときだけ公開鍵を返す。使わないときは空（公開鍵の API が 503 を返す）。
+func (c vapidConfig) enabledPublicKey() string {
+	if !c.enabled() {
 		return ""
 	}
-	return pub
+	return c.publicKey
 }
