@@ -38,3 +38,13 @@ type Stall struct {
 	CreatedAt      time.Time
 	UpdatedAt      time.Time
 }
+
+// Congestion は混雑度（マップのピンの色）。
+type Congestion string
+
+const (
+	CongestionRed    Congestion = "red"
+	CongestionYellow Congestion = "yellow"
+	CongestionGreen  Congestion = "green"
+	CongestionGray   Congestion = "gray" // 営業中でない
+)

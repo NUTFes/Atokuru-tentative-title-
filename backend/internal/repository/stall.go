@@ -43,3 +43,26 @@ func (r *StallRepository) UpdateBusinessStatus(ctx context.Context, id uint, sta
 	}
 	return r.FindByID(ctx, id)
 }
+
+// StallWithWaitingCount は、屋台と、その屋台で調理中（waiting）の整理券の数。
+type StallWithWaitingCount struct {
+	domain.Stall `gorm:"embedded"`
+	WaitingCount int
+}
+
+// ListWithWaitingCount は全ての屋台を、調理中の整理券の数と一緒に店番号の順で取る。
+// 屋台ごとにクエリを投げず、LEFT JOIN と GROUP BY の1クエリでまとめて取る。
+// 整理券は (stall_id, status, order_number) のインデックスで、waiting の行だけを数える。
+func (r *StallRepository) ListWithWaitingCount(ctx context.Context) ([]StallWithWaitingCount, error) {
+	var rows []StallWithWaitingCount
+	err := r.db.WithContext(ctx).Raw(listWithWaitingCountSQL, string(domain.TicketStatusWaiting)).Scan(&rows).Error
+	return rows, err
+}
+
+const listWithWaitingCountSQL = `
+	SELECT stalls.*, COUNT(tickets.id) AS waiting_count
+	FROM stalls
+	LEFT JOIN tickets INDEXED BY idx_tickets_stall_status_order
+		ON tickets.stall_id = stalls.id AND tickets.status = ?
+	GROUP BY stalls.id
+	ORDER BY stalls.stall_number`

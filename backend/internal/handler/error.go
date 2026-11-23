@@ -11,9 +11,6 @@ import (
 	"github.com/NUTFes/Atokuru-tentative-title-/backend/internal/gen"
 )
 
-// errNotImplemented は、まだ中身を書いていない API が返す。
-var errNotImplemented = errors.New("not implemented")
-
 // HTTPErrorHandler は、どの API で起きたエラーも仕様書の Error（code と message）の形で返す。
 // handler が返したエラーも、Echo がルーティングや引数の読み取りで出したエラーも、すべてここを通る。
 func HTTPErrorHandler(err error, c echo.Context) {
@@ -42,10 +39,6 @@ func toErrorResponse(err error) (int, gen.Error) {
 		case errors.Is(err, domain.ErrStallNotOpen):
 			return http.StatusConflict, gen.Error{Code: "stall_not_open", Message: de.Message}
 		}
-	}
-
-	if errors.Is(err, errNotImplemented) {
-		return http.StatusNotImplemented, gen.Error{Code: "not_implemented", Message: "この API はまだ実装していません"}
 	}
 
 	var he *echo.HTTPError

@@ -46,3 +46,48 @@ func (u *StallUsecase) UpdateBusinessStatus(ctx context.Context, id uint, status
 	}
 	return s, err
 }
+
+// 混雑度のしきい値（調理中の整理券の数）。
+// TODO(#9): あまねが #9 で決めた値に置き換える。今は仮の値。
+const (
+	congestionYellowFrom = 5  // これ以上なら黄
+	congestionRedFrom    = 10 // これ以上なら赤
+)
+
+// StallSummary はマップに出す屋台の情報。
+type StallSummary struct {
+	Stall        domain.Stall
+	WaitingCount int
+	Congestion   domain.Congestion
+}
+
+// List は全ての屋台を、調理中の整理券の数と混雑度と一緒に返す（マップ用）。
+func (u *StallUsecase) List(ctx context.Context) ([]StallSummary, error) {
+	rows, err := u.stalls.ListWithWaitingCount(ctx)
+	if err != nil {
+		return nil, err
+	}
+	res := make([]StallSummary, 0, len(rows))
+	for _, r := range rows {
+		res = append(res, StallSummary{
+			Stall:        r.Stall,
+			WaitingCount: r.WaitingCount,
+			Congestion:   congestion(r.BusinessStatus, r.WaitingCount),
+		})
+	}
+	return res, nil
+}
+
+// congestion は営業状況と調理中の整理券の数から混雑度を決める。営業中でない店は灰。
+func congestion(status domain.BusinessStatus, waitingCount int) domain.Congestion {
+	switch {
+	case status != domain.BusinessStatusOpen:
+		return domain.CongestionGray
+	case waitingCount >= congestionRedFrom:
+		return domain.CongestionRed
+	case waitingCount >= congestionYellowFrom:
+		return domain.CongestionYellow
+	default:
+		return domain.CongestionGreen
+	}
+}
