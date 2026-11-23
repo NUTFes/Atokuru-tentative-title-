@@ -47,7 +47,8 @@
     "readyMessage": "Your order is ready. Please pick it up at the stall",
     "receivedMessage": "Picked up",
     "note": "Note",
-    "issuedAt": "Issued at"
+    "issuedAt": "Issued at",
+    "detail": "View details"
   },
   "home": {
     "title": "Tickets",
@@ -85,7 +86,9 @@
       "title": "Issue ticket",
       "noteLabel": "Note",
       "notePlaceholder": "e.g. Large, 2 pcs",
-      "submit": "Issue"
+      "submit": "Issue",
+      "description": "Add a note if needed",
+      "submitting": "Issuing…"
     },
     "issuedModal": {
       "title": "Ticket issued",
@@ -94,13 +97,20 @@
     "status": {
       "title": "Status",
       "description": "Choose your current status",
-      "updated": "Status updated"
+      "updated": "Status updated",
+      "hints": {
+        "open": "You can issue tickets",
+        "preparing": "Not open yet",
+        "sold_out": "Sold out for today",
+        "closed": "Closed for today"
+      }
     },
     "settings": {
       "title": "More",
       "language": "Language",
       "logout": "Log out",
-      "logoutConfirm": "Log out?"
+      "logoutConfirm": "Log out?",
+      "account": "Account"
     }
   },
   "language": {
