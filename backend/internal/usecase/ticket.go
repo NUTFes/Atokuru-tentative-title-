@@ -19,12 +19,24 @@ const maxCommentLength = 200
 
 // TicketUsecase は整理券についての処理をまとめる。
 type TicketUsecase struct {
-	stalls  *repository.StallRepository
-	tickets *repository.TicketRepository
+	stalls        *repository.StallRepository
+	tickets       *repository.TicketRepository
+	subscriptions *repository.PushSubscriptionRepository
+	// sender は通知を送る。nil なら通知を送らない（VAPID の鍵を設定していないとき）。
+	sender PushSender
+	// runAsync は通知の送信を、status の変更のレスポンスを返したあとに動かす。テストでは、すぐに動かすものに差し替える。
+	runAsync func(func())
 }
 
-func NewTicketUsecase(stalls *repository.StallRepository, tickets *repository.TicketRepository) *TicketUsecase {
-	return &TicketUsecase{stalls: stalls, tickets: tickets}
+// NewTicketUsecase を作る。sender が nil なら通知は送らない。
+func NewTicketUsecase(stalls *repository.StallRepository, tickets *repository.TicketRepository, subscriptions *repository.PushSubscriptionRepository, sender PushSender) *TicketUsecase {
+	return &TicketUsecase{
+		stalls:        stalls,
+		tickets:       tickets,
+		subscriptions: subscriptions,
+		sender:        sender,
+		runAsync:      func(f func()) { go f() },
+	}
 }
 
 // Create は整理券を発行する。営業中（open）でない屋台では発行できない。
@@ -174,7 +186,11 @@ func (u *TicketUsecase) ListByStall(ctx context.Context, stallID uint, in ListIn
 //   - waiting に戻したとき：空にする（まだ調理完了していないので）
 //   - received にしたとき：そのまま残す（いつ呼び出したかの記録として）
 //
-// 今と同じ status を指定したときは、何も変えずにそのまま返す（ready を2回押しても呼び出し時刻は変わらない）。
+// 今と同じ status を指定したときは、何も変えずにそのまま返す（ready を2回押しても呼び出し時刻は変わらず、通知も送らない）。
+//
+// 変えたあとに通知（Web Push）を送る（notify.go）。
+//   - waiting から ready にしたとき：その整理券に「調理完了」
+//   - received にして受け取り済みの最大番号が進んだとき：前に何人が3人以下になった整理券に「あと3人」
 func (u *TicketUsecase) UpdateStatus(ctx context.Context, id uint, status domain.TicketStatus) (*domain.Ticket, error) {
 	if !status.Valid() {
 		return nil, domain.InvalidInput("status は waiting / ready / received のどれかにしてください")
@@ -198,5 +214,28 @@ func (u *TicketUsecase) UpdateStatus(ctx context.Context, id uint, status domain
 	case domain.TicketStatusWaiting:
 		calledAt = nil
 	}
-	return u.tickets.UpdateStatus(ctx, id, status, calledAt)
+
+	// 「あと3人」の相手を決めるには、受け取り済みの最大番号が変える前にいくつだったかが要る。
+	var maxReceivedBefore int
+	if u.sender != nil && status == domain.TicketStatusReceived {
+		if maxReceivedBefore, err = u.tickets.MaxReceivedOrderNumber(ctx, t.StallID); err != nil {
+			return nil, err
+		}
+	}
+
+	updated, err := u.tickets.UpdateStatus(ctx, id, status, calledAt)
+	if err != nil {
+		return nil, err
+	}
+
+	// 通知は、レスポンスを待たせないように後から送る。送れなくても status の変更は成功にする。
+	if u.sender != nil {
+		from, ticket := t.Status, *updated
+		u.runAsync(func() {
+			ctx, cancel := context.WithTimeout(context.Background(), notifyTimeout)
+			defer cancel()
+			u.notifyStatusChange(ctx, &ticket, from, maxReceivedBefore)
+		})
+	}
+	return updated, nil
 }

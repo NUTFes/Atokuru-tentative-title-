@@ -38,6 +38,8 @@ func toErrorResponse(err error) (int, gen.Error) {
 			return http.StatusBadRequest, gen.Error{Code: "bad_request", Message: de.Message}
 		case errors.Is(err, domain.ErrStallNotOpen):
 			return http.StatusConflict, gen.Error{Code: "stall_not_open", Message: de.Message}
+		case errors.Is(err, domain.ErrPushUnavailable):
+			return http.StatusServiceUnavailable, gen.Error{Code: "push_unavailable", Message: de.Message}
 		}
 	}
 

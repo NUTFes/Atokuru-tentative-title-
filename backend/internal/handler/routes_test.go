@@ -17,6 +17,9 @@ import (
 	"github.com/NUTFes/Atokuru-tentative-title-/backend/internal/usecase"
 )
 
+// testVapidPublicKey はテスト用の VAPID 公開鍵（中身は使わないので、形だけ合わせた値）。
+const testVapidPublicKey = "BTestPublicKey"
+
 // newTestServer は、手元の SQLite ファイルを使って main.go と同じ組み立てのサーバーを作る。
 func newTestServer(t *testing.T) (*echo.Echo, *gorm.DB) {
 	t.Helper()
@@ -29,7 +32,12 @@ func newTestServer(t *testing.T) (*echo.Echo, *gorm.DB) {
 	}
 	stallRepo := repository.NewStallRepository(gdb)
 	ticketRepo := repository.NewTicketRepository(gdb)
-	h := New(usecase.NewStallUsecase(stallRepo), usecase.NewTicketUsecase(stallRepo, ticketRepo))
+	pushRepo := repository.NewPushSubscriptionRepository(gdb)
+	h := New(
+		usecase.NewStallUsecase(stallRepo),
+		usecase.NewTicketUsecase(stallRepo, ticketRepo, pushRepo, nil),
+		usecase.NewPushUsecase(ticketRepo, pushRepo, testVapidPublicKey),
+	)
 
 	e := echo.New()
 	e.HTTPErrorHandler = HTTPErrorHandler
