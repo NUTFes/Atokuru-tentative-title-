@@ -71,7 +71,9 @@
       "stallId": "店舗 ID",
       "password": "パスワード",
       "submit": "ログイン",
-      "failed": "店舗 ID またはパスワードが違います"
+      "failed": "店舗 ID またはパスワードが違います",
+      "notFound": "この店舗 ID の模擬店は見つかりませんでした",
+      "description": "配られた店舗 ID を入力してください"
     },
     "tickets": {
       "title": "整理券一覧",
@@ -80,7 +82,8 @@
       "issue": "整理券を発行",
       "markReady": "調理完了にする",
       "markReceived": "受け取り済みにする",
-      "undo": "元に戻す"
+      "undo": "元に戻す",
+      "notOpen": "営業中でないので整理券を発行できません。営業状況を「営業中」にしてください"
     },
     "issueSheet": {
       "title": "整理券を発行",

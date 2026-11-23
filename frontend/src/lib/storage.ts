@@ -40,3 +40,50 @@ export function loadInstallGuideDismissed(): boolean {
 export function saveInstallGuideDismissed(): void {
   write(INSTALL_GUIDE_DISMISSED_KEY, "1");
 }
+
+const TICKET_TOKENS_KEY = "atokuru:ticket-tokens";
+
+/** 保存した整理券の public_token の一覧（新しい順） */
+export function loadTicketTokens(): string[] {
+  try {
+    const value: unknown = JSON.parse(read(TICKET_TOKENS_KEY) ?? "[]");
+    return Array.isArray(value) ? value.filter((v): v is string => typeof v === "string") : [];
+  } catch {
+    return [];
+  }
+}
+
+/** 整理券の public_token を先頭に足す。すでにあれば false を返す */
+export function addTicketToken(token: string): boolean {
+  const tokens = loadTicketTokens();
+  if (tokens.includes(token)) return false;
+  write(TICKET_TOKENS_KEY, JSON.stringify([token, ...tokens]));
+  return true;
+}
+
+/** 整理券の public_token を一覧から消す */
+export function removeTicketToken(token: string): void {
+  write(TICKET_TOKENS_KEY, JSON.stringify(loadTicketTokens().filter((t) => t !== token)));
+}
+
+const STALL_ID_KEY = "atokuru:stall-id";
+
+/** 模擬店画面でログインしている店の ID。ログインしていなければ null */
+export function loadStallId(): number | null {
+  const id = Number(read(STALL_ID_KEY));
+  return Number.isInteger(id) && id > 0 ? id : null;
+}
+
+/** 模擬店画面でログインした店の ID を保存する */
+export function saveStallId(id: number): void {
+  write(STALL_ID_KEY, String(id));
+}
+
+/** 模擬店画面からログアウトする */
+export function clearStallId(): void {
+  try {
+    window.localStorage.removeItem(STALL_ID_KEY);
+  } catch {
+    // 消せなくても画面はそのまま動かす
+  }
+}

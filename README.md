@@ -136,6 +136,8 @@
 
 shadcn/ui のコンポーネントは `frontend/` で `npx shadcn@latest add <component>`（例: `npx shadcn@latest add button`）を実行して追加します。生成先は `src/components/ui/` です。
 
+shadcn が `import { cn } from "cn"` で生成することがあるので、追加したら `@/lib/utils` に直し、`package.json` に `cn` が入っていたら `npm uninstall cn` で外してください。
+
 <p align="right">(<a href="#top">トップへ</a>)</p>
 
 ## 開発環境構築
@@ -168,6 +170,7 @@ docker compose up --build
 | `VAPID_PUBLIC_KEY` | 通知（Web Push）の VAPID 公開鍵。3つそろっていないと通知を使わずに動く | なし（通知を使わない） | 空 |
 | `VAPID_PRIVATE_KEY` | 通知の VAPID 秘密鍵。Git に上げない。作り直すとそれまでの購読が使えなくなる | なし | 空 |
 | `VAPID_SUBJECT` | 通知を送る人の連絡先（`mailto:` か `https:` の URL） | なし | 空 |
+| `NEXT_PUBLIC_API_BASE_URL` | FE から呼ぶ API の URL（`frontend/.env.local` に書く）。本番は同じオリジンなので空 | `/api` | `http://localhost:8080/api` |
 
 `backend/.env.example` を `backend/.env` にコピーして値を埋めてください。
 
@@ -188,6 +191,7 @@ DB の接続情報などの秘密情報は `.env` に書き、Git には上げ�
 | `npm run build` | 静的エクスポートでビルドする。`frontend/out/` に HTML・CSS・JS ができる |
 | `npm run lint` | ESLint でチェックする |
 | `npx shadcn@latest add <component>` | shadcn/ui のコンポーネントを `src/components/ui/` に追加する |
+| `npm run gen:api` | `openapi/openapi.yaml` から API の型（`src/lib/api/schema.d.ts`）を作り直す。仕様書を変えたら実行する |
 
 Docker でビルドだけを確かめるときは、`frontend/` で `docker build --target build .` を実行します。
 
