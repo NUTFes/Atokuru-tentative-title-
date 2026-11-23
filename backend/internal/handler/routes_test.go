@@ -3,19 +3,37 @@ package handler
 import (
 	"net/http"
 	"net/http/httptest"
+	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 
 	"github.com/labstack/echo/v4"
+	"gorm.io/gorm"
 
 	"github.com/NUTFes/Atokuru-tentative-title-/backend/internal/gen"
+	"github.com/NUTFes/Atokuru-tentative-title-/backend/internal/infra/db"
+	"github.com/NUTFes/Atokuru-tentative-title-/backend/internal/repository"
+	"github.com/NUTFes/Atokuru-tentative-title-/backend/internal/usecase"
 )
 
-func newTestServer(h *Handler) *echo.Echo {
+// newTestServer は、手元の SQLite ファイルを使って main.go と同じ組み立てのサーバーを作る。
+func newTestServer(t *testing.T) (*echo.Echo, *gorm.DB) {
+	t.Helper()
+	gdb, err := db.Open("file:"+filepath.Join(t.TempDir(), "test.db"), "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Migrate(gdb); err != nil {
+		t.Fatal(err)
+	}
+	stallRepo := repository.NewStallRepository(gdb)
+	h := New(usecase.NewStallUsecase(stallRepo))
+
 	e := echo.New()
 	e.HTTPErrorHandler = HTTPErrorHandler
 	gen.RegisterHandlersWithBaseURL(e, gen.NewStrictHandler(h, nil), "/api")
-	return e
+	return e, gdb
 }
 
 func doRequest(e *echo.Echo, method, path, body string) *httptest.ResponseRecorder {
@@ -31,7 +49,7 @@ func doRequest(e *echo.Echo, method, path, body string) *httptest.ResponseRecord
 // 仕様書の全 API がルーティングに登録されているか（404 にならないか）と、
 // エラーが Error の形で返るかを確かめる。
 func TestRoutes(t *testing.T) {
-	e := newTestServer(New())
+	e, _ := newTestServer(t)
 
 	tests := []struct {
 		name, method, path, body string
@@ -58,3 +76,5 @@ func TestRoutes(t *testing.T) {
 		t.Errorf("/api/health: status = %d", rec.Code)
 	}
 }
+
+func itoa(id uint) string { return strconv.FormatUint(uint64(id), 10) }

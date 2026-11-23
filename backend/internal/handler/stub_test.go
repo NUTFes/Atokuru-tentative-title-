@@ -8,10 +8,9 @@ import (
 // まだ中身のない API が、ルーティングには登録されていて 501 を返すことを確かめる。
 // API を実装したら、その行を消す。
 func TestNotImplementedRoutes(t *testing.T) {
-	e := newTestServer(New())
+	e, _ := newTestServer(t)
 	routes := []struct{ method, path, body string }{
 		{http.MethodGet, "/api/stalls", ""},
-		{http.MethodGet, "/api/stalls/1", ""},
 		{http.MethodPatch, "/api/stalls/1/business-status", `{"business_status":"open"}`},
 		{http.MethodGet, "/api/stalls/1/tickets?status=waiting", ""},
 		{http.MethodPost, "/api/stalls/1/tickets", `{}`},

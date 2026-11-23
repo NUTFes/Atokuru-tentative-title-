@@ -16,6 +16,8 @@ import (
 	"github.com/NUTFes/Atokuru-tentative-title-/backend/internal/gen"
 	"github.com/NUTFes/Atokuru-tentative-title-/backend/internal/handler"
 	"github.com/NUTFes/Atokuru-tentative-title-/backend/internal/infra/db"
+	"github.com/NUTFes/Atokuru-tentative-title-/backend/internal/repository"
+	"github.com/NUTFes/Atokuru-tentative-title-/backend/internal/usecase"
 )
 
 func main() {
@@ -26,7 +28,9 @@ func main() {
 	if err := db.Migrate(gdb); err != nil {
 		log.Fatal(err)
 	}
-	_ = gdb // repository に渡すのは、API を実装する Issue から
+
+	stallRepo := repository.NewStallRepository(gdb)
+	stallUsecase := usecase.NewStallUsecase(stallRepo)
 
 	e := echo.New()
 	e.HideBanner = true
@@ -36,7 +40,7 @@ func main() {
 
 	// API はすべて /api の下に置く（openapi.yaml の servers と合わせる）。
 	// それ以外の URL は、FE の静的ファイルを返すために空けておく。
-	h := handler.New()
+	h := handler.New(stallUsecase)
 	gen.RegisterHandlersWithBaseURL(e, gen.NewStrictHandler(h, nil), "/api")
 
 	port := os.Getenv("PORT")
