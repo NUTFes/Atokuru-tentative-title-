@@ -1,0 +1,81 @@
+stall_number,name,hp_link,business_status,purpose
+A-01,国際交流サークル主催・本場の味を再現した特製スパイスカレーとナンのお店,https://example.com/curry,open,店名がとても長い（35文字）。カードやマップで折り返し・省略されるか
+A-02,飴,,open,店名が1文字。HPなし
+A-03,<script>alert(1)</script>屋,https://example.com/xss,open,HTMLタグを含む店名。エスケープされて表示されるか
+A-04,"Café ""Mom's"" & Co., Ltd.",,preparing,ダブルクォート・シングルクォート・&・カンマを含む。CSVの引用とJSONのエスケープ
+A-05,🍜🍙,https://example.com/emoji,open,絵文字だけの店名
+A-06,ﾀｺﾔｷ,https://example.com/takoyaki,sold_out,半角カタカナ
+A-07,Burger Lab,http://example.com/burger,closed,英語だけの店名。http（httpsでない）のURL
+A-08,ＡＢＣクレープ１２３,https://www.instagram.com/example,open,全角英数字。InstagramのURL
+A-09,焼きそば研究会,https://example.com/stalls/yakisoba?utm_source=pamphlet&utm_medium=qr&utm_campaign=gakuensai2026&ref=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx,open,とても長いURL（クエリ付き）
+A-10,国際交流サークル主催・本場の味を再現した特製スパイスケバブとナンのお店,,sold_out,長い店名・HPなし・売り切れ
+B-01,茶,,closed,短い店名・HPなし・閉店
+B-02,軽音楽部のたこ焼き,https://x.com/example,preparing,XのURL・準備中
+B-03,100%ジュース\屋,https://example.com/juice,open,%とバックスラッシュを含む
+B-04,ポップコーン工房,https://例え.テスト/popcorn,open,日本語ドメインのURL
+B-05,わたあめ同好会,https://example.com/店/メニュー?q=わたあめ#menu,open,日本語のパスとフラグメントを含むURL
+B-06,留学生会が故郷の味をそのまま再現した屋台風フォーとバインミーのお店です,https://example.com/stalls/b-06,closed,店名:長い（25文字以上） / HP:あり / 閉店
+B-07,チョコバナナ本舗,javascript:alert(1),open,javascript: のURL。リンクにせず、http(s) 以外を弾けているか
+B-08,電気電子情報工学科の研究室メンバーが本気で作る昔ながらの手作りコロッケ屋,https://example.com/stalls/b-08,sold_out,店名:長い（25文字以上） / HP:あり / 売り切れ
+B-09,甘酒,,sold_out,店名:短い（1〜3文字） / HP:なし / 売り切れ
+B-10,ぜんざい茶屋,https://example.com/stalls/b-10,open,店名:普通 / HP:あり / 営業中
+C-01,お好み焼き部,https://example.com/stalls/c-01,open,店名:普通 / HP:あり / 営業中
+C-02,ホットサンド部,https://example.com/stalls/c-02,open,店名:普通 / HP:あり / 営業中
+C-03,マフィン工房,https://example.com/stalls/c-03,open,店名:普通 / HP:あり / 営業中
+C-04,フランクフルト屋,,open,店名:普通 / HP:なし / 営業中
+C-05,メロンパン工房,https://example.com/stalls/c-05,open,店名:普通 / HP:あり / 営業中
+C-06,肉巻きおにぎり,,open,店名:普通 / HP:なし / 営業中
+C-07,写真部と美術部が合同でお届けする映えるカラフルフルーツサンドとドリンク,https://example.com/stalls/c-07,preparing,店名:長い（25文字以上） / HP:あり / 準備中
+C-08,クレープ同好会,,closed,店名:普通 / HP:なし / 閉店
+C-09,台湾カステラ,https://example.com/stalls/c-09,open,店名:普通 / HP:あり / 営業中
+C-10,抹茶ラテの店,,open,店名:普通 / HP:なし / 営業中
+D-01,スイートポテト,https://example.com/stalls/d-01,open,店名:普通 / HP:あり / 営業中
+D-02,焼芋,https://example.com/stalls/d-02,open,店名:短い（1〜3文字） / HP:あり / 営業中
+D-03,ラッシーの店,https://example.com/stalls/d-03,preparing,店名:普通 / HP:あり / 準備中
+D-04,コーヒー研究会,https://example.com/stalls/d-04,open,店名:普通 / HP:あり / 営業中
+D-05,手作りスコーン,https://example.com/stalls/d-05,open,店名:普通 / HP:あり / 営業中
+D-06,やきそばパン工房,https://example.com/stalls/d-06,open,店名:普通 / HP:あり / 営業中
+D-07,機械工学科三年有志による炭火で丁寧に焼き上げた本格焼き鳥と特製タレの店,,open,店名:長い（25文字以上） / HP:なし / 営業中
+D-08,揚げパン部,https://example.com/stalls/d-08,preparing,店名:普通 / HP:あり / 準備中
+D-09,じゃがバター,,closed,店名:普通 / HP:なし / 閉店
+D-10,ガパオライス,https://example.com/stalls/d-10,closed,店名:普通 / HP:あり / 閉店
+E-01,吹奏楽部OB・OG会が毎年恒例でお届けしている大人気のふわふわ大判焼き本舗,https://example.com/stalls/e-01,open,店名:長い（25文字以上） / HP:あり / 営業中
+E-02,ナポリタン食堂,,open,店名:普通 / HP:なし / 営業中
+E-03,イカ焼き屋,https://example.com/stalls/e-03,sold_out,店名:普通 / HP:あり / 売り切れ
+E-04,焼きおにぎり処,https://example.com/stalls/e-04,open,店名:普通 / HP:あり / 営業中
+E-05,トッポギ屋,https://example.com/stalls/e-05,sold_out,店名:普通 / HP:あり / 売り切れ
+E-06,焼きとうもろこし,https://example.com/stalls/e-06,open,店名:普通 / HP:あり / 営業中
+E-07,ホットドッグ亭,,open,店名:普通 / HP:なし / 営業中
+E-08,フルーツポンチ,https://example.com/stalls/e-08,open,店名:普通 / HP:あり / 営業中
+E-09,ワッフル研究会,https://example.com/stalls/e-09,open,店名:普通 / HP:あり / 営業中
+E-10,テニスサークルの一年生が初出店で挑戦する手作りもちもちチーズハットグ専門店,,preparing,店名:長い（25文字以上） / HP:なし / 準備中
+F-01,トルティーヤ屋,https://example.com/stalls/f-01,open,店名:普通 / HP:あり / 営業中
+F-02,ハニートースト,https://example.com/stalls/f-02,open,店名:普通 / HP:あり / 営業中
+F-03,焼きマシュマロ,https://example.com/stalls/f-03,open,店名:普通 / HP:あり / 営業中
+F-04,おでん,https://example.com/stalls/f-04,preparing,店名:短い（1〜3文字） / HP:あり / 準備中
+F-05,ケバブサンド,https://example.com/stalls/f-05,open,店名:普通 / HP:あり / 営業中
+F-06,ソーセージ屋,https://example.com/stalls/f-06,preparing,店名:普通 / HP:あり / 準備中
+F-07,うどん同好会,,open,店名:普通 / HP:なし / 営業中
+F-08,ドーナツ工房,https://example.com/stalls/f-08,closed,店名:普通 / HP:あり / 閉店
+F-09,ベビーカステラ,https://example.com/stalls/f-09,open,店名:普通 / HP:あり / 営業中
+F-10,豚まん本舗,,open,店名:普通 / HP:なし / 営業中
+G-01,カレーパン部,https://example.com/stalls/g-01,preparing,店名:普通 / HP:あり / 準備中
+G-02,冷やしきゅうり,https://example.com/stalls/g-02,open,店名:普通 / HP:あり / 営業中
+G-03,チュロス屋,https://example.com/stalls/g-03,open,店名:普通 / HP:あり / 営業中
+G-04,レモネード屋,https://example.com/stalls/g-04,open,店名:普通 / HP:あり / 営業中
+G-05,からあげ部,https://example.com/stalls/g-05,sold_out,店名:普通 / HP:あり / 売り切れ
+G-06,五平餅の店,https://example.com/stalls/g-06,sold_out,店名:普通 / HP:あり / 売り切れ
+G-07,化学同好会が実験のように正確な温度管理で淹れるこだわりのハンドドリップ珈琲,,closed,店名:長い（25文字以上） / HP:なし / 閉店
+G-08,タピオカ同好会,https://example.com/stalls/g-08,open,店名:普通 / HP:あり / 営業中
+G-09,白玉ぜんざい,https://example.com/stalls/g-09,open,店名:普通 / HP:あり / 営業中
+G-10,いちご飴の店,https://example.com/stalls/g-10,open,店名:普通 / HP:あり / 営業中
+H-01,フライドポテト工房,https://example.com/stalls/h-01,closed,店名:普通 / HP:あり / 閉店
+H-02,唐揚げ丼の店,,sold_out,店名:普通 / HP:なし / 売り切れ
+H-03,将棋部と囲碁部が対局の合間に心を込めて焼き上げるあつあつ鈴カステラ工房,https://example.com/stalls/h-03,open,店名:長い（25文字以上） / HP:あり / 営業中
+H-04,豚汁,https://example.com/stalls/h-04,closed,店名:短い（1〜3文字） / HP:あり / 閉店
+H-05,パンケーキ屋,https://example.com/stalls/h-05,open,店名:普通 / HP:あり / 営業中
+H-06,かき氷研究所,https://example.com/stalls/h-06,open,店名:普通 / HP:あり / 営業中
+H-07,牛串屋,https://example.com/stalls/h-07,open,店名:普通 / HP:あり / 営業中
+H-08,焼きりんご,,open,店名:普通 / HP:なし / 営業中
+H-09,鯛焼,,preparing,店名:短い（1〜3文字） / HP:なし / 準備中
+H-10,団子,https://example.com/stalls/h-10,sold_out,店名:短い（1〜3文字） / HP:あり / 売り切れ
