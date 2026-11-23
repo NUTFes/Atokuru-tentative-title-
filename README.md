@@ -170,6 +170,8 @@ docker compose up --build
 | `VAPID_PUBLIC_KEY` | 通知（Web Push）の VAPID 公開鍵。3つそろっていないと通知を使わずに動く | なし（通知を使わない） | 空 |
 | `VAPID_PRIVATE_KEY` | 通知の VAPID 秘密鍵。Git に上げない。作り直すとそれまでの購読が使えなくなる | なし | 空 |
 | `VAPID_SUBJECT` | 通知を送る人の連絡先（`mailto:` か `https:` の URL） | なし | 空 |
+| `OPENAI_API_KEY` | 備考の定型文を訳す OpenAI の API キー。Git に上げない。`OPENAI_MODEL` とそろっていないと、定型文を訳さずに登録する | なし（訳さない） | 空 |
+| `OPENAI_MODEL` | 定型文の翻訳に使う OpenAI のモデル名 | なし（訳さない） | 空 |
 | `NEXT_PUBLIC_API_BASE_URL` | FE から呼ぶ API の URL（`frontend/.env.local` に書く）。本番は同じオリジンなので空 | `/api` | `http://localhost:8080/api` |
 
 `backend/.env.example` を `backend/.env` にコピーして値を埋めてください。

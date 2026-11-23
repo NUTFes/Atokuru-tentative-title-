@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"path/filepath"
@@ -11,6 +12,7 @@ import (
 	"github.com/labstack/echo/v4"
 	"gorm.io/gorm"
 
+	"github.com/NUTFes/Atokuru-tentative-title-/backend/internal/domain"
 	"github.com/NUTFes/Atokuru-tentative-title-/backend/internal/gen"
 	"github.com/NUTFes/Atokuru-tentative-title-/backend/internal/infra/db"
 	"github.com/NUTFes/Atokuru-tentative-title-/backend/internal/repository"
@@ -21,7 +23,14 @@ import (
 const testVapidPublicKey = "BTestPublicKey"
 
 // newTestServer は、手元の SQLite ファイルを使って main.go と同じ組み立てのサーバーを作る。
+// 定型文の翻訳は、テスト用の訳（"EN:" + 元の文）を返すものにする。
 func newTestServer(t *testing.T) (*echo.Echo, *gorm.DB) {
+	t.Helper()
+	return newTestServerWithTranslator(t, testTranslator{})
+}
+
+// newTestServerWithTranslator は、定型文の翻訳を差し替えたテスト用のサーバーを作る（nil なら訳さない）。
+func newTestServerWithTranslator(t *testing.T, translator usecase.Translator) (*echo.Echo, *gorm.DB) {
 	t.Helper()
 	gdb, err := db.Open("file:"+filepath.Join(t.TempDir(), "test.db"), "")
 	if err != nil {
@@ -33,10 +42,12 @@ func newTestServer(t *testing.T) (*echo.Echo, *gorm.DB) {
 	stallRepo := repository.NewStallRepository(gdb)
 	ticketRepo := repository.NewTicketRepository(gdb)
 	pushRepo := repository.NewPushSubscriptionRepository(gdb)
+	templateRepo := repository.NewCommentTemplateRepository(gdb)
 	h := New(
 		usecase.NewStallUsecase(stallRepo),
-		usecase.NewTicketUsecase(stallRepo, ticketRepo, pushRepo, nil),
+		usecase.NewTicketUsecase(stallRepo, ticketRepo, pushRepo, templateRepo, nil),
 		usecase.NewPushUsecase(ticketRepo, pushRepo, testVapidPublicKey),
+		usecase.NewCommentTemplateUsecase(stallRepo, templateRepo, translator),
 	)
 
 	e := echo.New()
@@ -95,3 +106,10 @@ func TestRoutes(t *testing.T) {
 }
 
 func itoa(id uint) string { return strconv.FormatUint(uint64(id), 10) }
+
+// testTranslator は、定型文の前に "EN:" を付けたものを英語の訳として返す。
+type testTranslator struct{}
+
+func (testTranslator) Translate(_ context.Context, text string, _ []string) (domain.Translations, error) {
+	return domain.Translations{"en": "EN:" + text}, nil
+}

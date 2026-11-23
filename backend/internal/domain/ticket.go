@@ -37,6 +37,9 @@ type Ticket struct {
 	Status      TicketStatus `gorm:"not null;default:waiting;index:idx_tickets_stall_status_order,priority:2"`
 	// Comment は備考（メニューなど）。ない場合は null。
 	Comment *string
+	// CommentTranslations は備考の訳。発券したときの備考が、その屋台の定型文と同じなら、定型文の訳をコピーする。
+	// 自由入力の備考は訳さないので空。
+	CommentTranslations Translations `gorm:"type:text;serializer:json"`
 	// CalledAt は調理完了（ready）にした時刻。まだなら null。
 	CalledAt *time.Time
 	// NearNotifiedAt は「あと3人」の通知を送った時刻。まだなら null。

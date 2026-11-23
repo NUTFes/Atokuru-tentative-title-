@@ -54,3 +54,22 @@ func TestMigrate_PushSubscriptions(t *testing.T) {
 		t.Error("tickets に near_notified_at の列がありません")
 	}
 }
+
+// 定型文に (stall_id, comment) のユニークがあり、訳の列があるかを確かめる。
+func TestMigrate_CommentTranslations(t *testing.T) {
+	gdb, err := Open("file:"+filepath.Join(t.TempDir(), "test.db"), "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := Migrate(gdb); err != nil {
+		t.Fatal(err)
+	}
+	if !gdb.Migrator().HasIndex("comment_templates", "idx_comment_templates_stall_comment") {
+		t.Error("インデックス idx_comment_templates_stall_comment がありません")
+	}
+	for table, col := range map[string]string{"comment_templates": "translations", "tickets": "comment_translations"} {
+		if !gdb.Migrator().HasColumn(table, col) {
+			t.Errorf("%s に %s の列がありません", table, col)
+		}
+	}
+}

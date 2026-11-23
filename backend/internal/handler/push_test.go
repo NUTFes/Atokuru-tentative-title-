@@ -36,7 +36,7 @@ func TestGetVapidPublicKey(t *testing.T) {
 
 // 鍵が設定されていないときは 503（push_unavailable）を返す。
 func TestGetVapidPublicKey_Unavailable(t *testing.T) {
-	h := New(nil, nil, usecase.NewPushUsecase(nil, nil, ""))
+	h := New(nil, nil, usecase.NewPushUsecase(nil, nil, ""), nil)
 	_, err := h.GetVapidPublicKey(t.Context(), gen.GetVapidPublicKeyRequestObject{})
 	status, body := toErrorResponse(err)
 	if status != http.StatusServiceUnavailable || body.Code != "push_unavailable" {

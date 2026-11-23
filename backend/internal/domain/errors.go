@@ -7,6 +7,7 @@ var (
 	ErrNotFound        = errors.New("not_found")        // 指定したものがない
 	ErrInvalidInput    = errors.New("bad_request")      // 入力の値が正しくない
 	ErrStallNotOpen    = errors.New("stall_not_open")   // 営業中でない屋台で発券しようとした
+	ErrConflict        = errors.New("conflict")         // すでにある、上限を超えるなど、今の状態ではできない
 	ErrPushUnavailable = errors.New("push_unavailable") // サーバーに VAPID の鍵がなく、通知を使えない
 )
 
@@ -22,6 +23,7 @@ func (e *Error) Unwrap() error { return e.Kind }
 func NotFound(message string) error     { return &Error{Kind: ErrNotFound, Message: message} }
 func InvalidInput(message string) error { return &Error{Kind: ErrInvalidInput, Message: message} }
 func StallNotOpen(message string) error { return &Error{Kind: ErrStallNotOpen, Message: message} }
+func Conflict(message string) error     { return &Error{Kind: ErrConflict, Message: message} }
 func PushUnavailable(message string) error {
 	return &Error{Kind: ErrPushUnavailable, Message: message}
 }
