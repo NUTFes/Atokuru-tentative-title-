@@ -26,7 +26,11 @@ func (h *Handler) CreateTicket(ctx context.Context, req gen.CreateTicketRequestO
 
 // GetTicket は GET /tickets/{publicToken}。
 func (h *Handler) GetTicket(ctx context.Context, req gen.GetTicketRequestObject) (gen.GetTicketResponseObject, error) {
-	return nil, errNotImplemented
+	d, err := h.tickets.GetByPublicToken(ctx, req.PublicToken)
+	if err != nil {
+		return nil, err
+	}
+	return gen.GetTicket200JSONResponse(toTicketDetail(d)), nil
 }
 
 // UpdateTicketStatus は PATCH /tickets/{ticketId}/status。

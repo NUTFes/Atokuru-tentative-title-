@@ -67,3 +67,14 @@ func (r *TicketRepository) FindByPublicToken(ctx context.Context, publicToken st
 	}
 	return &t, nil
 }
+
+// MaxReceivedOrderNumber は、その屋台で受け取り済み（received）の整理券の最大の order_number を返す。
+// 1枚もなければ 0 を返す。(stall_id, status, order_number) のインデックスで、数行だけ読んで済む。
+func (r *TicketRepository) MaxReceivedOrderNumber(ctx context.Context, stallID uint) (int, error) {
+	var maxNum int
+	err := r.db.WithContext(ctx).Raw(
+		"SELECT COALESCE(MAX(order_number), 0) FROM tickets WHERE stall_id = ? AND status = ?",
+		stallID, string(domain.TicketStatusReceived),
+	).Scan(&maxNum).Error
+	return maxNum, err
+}

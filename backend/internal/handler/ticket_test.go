@@ -138,3 +138,39 @@ func TestCreateTicket_Errors(t *testing.T) {
 	// ちょうど 200 文字なら発券できる
 	issueTicket(t, e, open.ID, `{"comment":"`+strings.Repeat("あ", 200)+`"}`)
 }
+
+func TestGetTicket(t *testing.T) {
+	e, gdb := newTestServer(t)
+	s := createStall(t, gdb, "A-01", domain.BusinessStatusOpen)
+
+	var issued []gen.Ticket
+	for i := 0; i < 5; i++ {
+		issued = append(issued, issueTicket(t, e, s.ID, `{"comment":"メモ"}`))
+	}
+	// 2番を受け取り済みにする（1番は取りに来ていない）
+	if err := gdb.Model(&domain.Ticket{}).Where("id = ?", issued[1].Id).Update("status", domain.TicketStatusReceived).Error; err != nil {
+		t.Fatal(err)
+	}
+
+	rec := doRequest(e, http.MethodGet, "/api/tickets/"+issued[4].PublicToken, "")
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, body = %s", rec.Code, rec.Body)
+	}
+	got := decode[gen.TicketDetail](t, rec.Body.Bytes())
+	// 5番 − 受け取り済みの最大 2番 − 1 = 2人（3番と4番）
+	if got.PeopleAhead != 2 || got.OrderNumber != 5 || got.StallName != "屋台A-01" || got.StallNumber != "A-01" ||
+		got.Status != gen.Waiting || got.Comment == nil || *got.Comment != "メモ" {
+		t.Errorf("got %+v", got)
+	}
+	if strings.Contains(rec.Body.String(), `"id"`) {
+		t.Errorf("連番の id を返しています: %s", rec.Body)
+	}
+}
+
+func TestGetTicket_NotFound(t *testing.T) {
+	e, _ := newTestServer(t)
+	rec := doRequest(e, http.MethodGet, "/api/tickets/no-such-token", "")
+	if rec.Code != http.StatusNotFound || !strings.Contains(rec.Body.String(), `"code":"not_found"`) {
+		t.Errorf("status = %d, body = %s", rec.Code, rec.Body)
+	}
+}

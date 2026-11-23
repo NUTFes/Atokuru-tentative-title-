@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"strings"
 	"unicode/utf8"
@@ -69,4 +70,44 @@ func newPublicToken() (string, error) {
 		return "", fmt.Errorf("public_token を作れません: %w", err)
 	}
 	return base64.RawURLEncoding.EncodeToString(b), nil
+}
+
+// TicketDetail は来場者に見せる整理券。屋台の情報と、前に何人いるかを含む。
+type TicketDetail struct {
+	Ticket      *domain.Ticket
+	Stall       *domain.Stall
+	PeopleAhead int
+}
+
+// GetByPublicToken は public_token で整理券を取り、前に何人いるかを計算する。
+func (u *TicketUsecase) GetByPublicToken(ctx context.Context, publicToken string) (*TicketDetail, error) {
+	t, err := u.tickets.FindByPublicToken(ctx, publicToken)
+	if errors.Is(err, domain.ErrNotFound) {
+		return nil, domain.NotFound("整理券が見つかりません")
+	}
+	if err != nil {
+		return nil, err
+	}
+	stall, err := u.stalls.FindByID(ctx, t.StallID)
+	if err != nil {
+		return nil, err
+	}
+	maxReceived, err := u.tickets.MaxReceivedOrderNumber(ctx, t.StallID)
+	if err != nil {
+		return nil, err
+	}
+	return &TicketDetail{Ticket: t, Stall: stall, PeopleAhead: peopleAhead(t, maxReceived)}, nil
+}
+
+// peopleAhead は前に何人いるかを返す。
+//
+//	前に何人 = 自分の order_number − 同じ屋台で received の最大 order_number − 1
+//
+// 受け取りに来なかった人は、後ろの番号が受け取り済みになった時点で数えなくなる。
+// 後ろの番号の人が先に受け取るとマイナスになるので 0 にする。調理中（waiting）でなければ待っていないので 0。
+func peopleAhead(t *domain.Ticket, maxReceivedOrderNumber int) int {
+	if t.Status != domain.TicketStatusWaiting {
+		return 0
+	}
+	return max(t.OrderNumber-maxReceivedOrderNumber-1, 0)
 }
