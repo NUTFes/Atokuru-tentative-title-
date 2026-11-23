@@ -1,8 +1,20 @@
-// 環境構築の確認用のページ。ホーム画面（整理券一覧）は #20 で作る。
+"use client";
+
+import { TicketCard } from "@/components/ticket/ticket-card";
+
+// #10 の確認用。固定値を渡してカードを表示する（#20 でホーム画面を作るときに置き換える）
 export default function Home() {
   return (
-    <main className="flex flex-1 items-center justify-center">
-      <h1 className="text-2xl font-bold">アトクル</h1>
+    <main className="mx-auto flex min-h-svh max-w-md flex-col gap-4 p-4">
+      <TicketCard
+        stallName="たこ焼き屋"
+        orderNumber={12}
+        aheadCount={3}
+        status="waiting"
+        onAction={() => console.log("action")}
+      />
+      <TicketCard stallName="焼きそば屋" orderNumber={5} status="ready" />
+      <TicketCard stallName="クレープ屋" orderNumber={2} status="received" />
     </main>
   );
 }
