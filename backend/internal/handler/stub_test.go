@@ -13,7 +13,6 @@ func TestNotImplementedRoutes(t *testing.T) {
 		{http.MethodGet, "/api/stalls", ""},
 		{http.MethodPatch, "/api/stalls/1/business-status", `{"business_status":"open"}`},
 		{http.MethodGet, "/api/stalls/1/tickets?status=waiting", ""},
-		{http.MethodPost, "/api/stalls/1/tickets", `{}`},
 		{http.MethodGet, "/api/tickets/abc", ""},
 		{http.MethodPatch, "/api/tickets/1/status", `{"status":"ready"}`},
 	}

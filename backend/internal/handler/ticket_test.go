@@ -1,0 +1,140 @@
+package handler
+
+import (
+	"encoding/json"
+	"net/http"
+	"strings"
+	"sync"
+	"testing"
+
+	"github.com/labstack/echo/v4"
+
+	"github.com/NUTFes/Atokuru-tentative-title-/backend/internal/domain"
+	"github.com/NUTFes/Atokuru-tentative-title-/backend/internal/gen"
+)
+
+func decode[T any](t *testing.T, body []byte) T {
+	t.Helper()
+	var v T
+	if err := json.Unmarshal(body, &v); err != nil {
+		t.Fatalf("JSON を読めません: %v (%s)", err, body)
+	}
+	return v
+}
+
+// issueTicket は API で整理券を発行する。
+func issueTicket(t *testing.T, e *echo.Echo, stallID uint, body string) gen.Ticket {
+	t.Helper()
+	rec := doRequest(e, http.MethodPost, "/api/stalls/"+itoa(stallID)+"/tickets", body)
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("発券: status = %d, body = %s", rec.Code, rec.Body)
+	}
+	return decode[gen.Ticket](t, rec.Body.Bytes())
+}
+
+func TestCreateTicket(t *testing.T) {
+	e, gdb := newTestServer(t)
+	s := createStall(t, gdb, "A-01", domain.BusinessStatusOpen)
+	other := createStall(t, gdb, "A-02", domain.BusinessStatusOpen)
+
+	t1 := issueTicket(t, e, s.ID, `{"comment":"  焼きそば 大盛り  "}`)
+	if t1.OrderNumber != 1 || t1.Status != gen.Waiting || t1.StallId != int64(s.ID) {
+		t.Errorf("1枚目: %+v", t1)
+	}
+	if t1.Comment == nil || *t1.Comment != "焼きそば 大盛り" {
+		t.Errorf("備考の前後の空白が取れていません: %v", t1.Comment)
+	}
+	if len(t1.PublicToken) != 22 || t1.CalledAt != nil || t1.CreatedAt.IsZero() {
+		t.Errorf("1枚目: %+v", t1)
+	}
+
+	t2 := issueTicket(t, e, s.ID, `{}`)
+	if t2.OrderNumber != 2 || t2.Comment != nil || t2.PublicToken == t1.PublicToken {
+		t.Errorf("2枚目: %+v", t2)
+	}
+
+	// 屋台ごとに 1 から振る
+	if o := issueTicket(t, e, other.ID, `{"comment":""}`); o.OrderNumber != 1 || o.Comment != nil {
+		t.Errorf("別の屋台: %+v", o)
+	}
+}
+
+// 同時に発券しても order_number が重複しないことを確かめる。
+func TestCreateTicket_Concurrent(t *testing.T) {
+	e, gdb := newTestServer(t)
+	s := createStall(t, gdb, "A-01", domain.BusinessStatusOpen)
+
+	const n = 30
+	var wg sync.WaitGroup
+	nums := make(chan int, n)
+	errs := make(chan string, n)
+	for i := 0; i < n; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			rec := doRequest(e, http.MethodPost, "/api/stalls/"+itoa(s.ID)+"/tickets", `{}`)
+			if rec.Code != http.StatusCreated {
+				errs <- rec.Body.String()
+				return
+			}
+			var tk gen.Ticket
+			_ = json.Unmarshal(rec.Body.Bytes(), &tk)
+			nums <- tk.OrderNumber
+		}()
+	}
+	wg.Wait()
+	close(nums)
+	close(errs)
+	for msg := range errs {
+		t.Errorf("発券に失敗: %s", msg)
+	}
+	seen := map[int]bool{}
+	for num := range nums {
+		if seen[num] {
+			t.Errorf("order_number %d が重複しています", num)
+		}
+		seen[num] = true
+	}
+	for i := 1; i <= len(seen); i++ {
+		if !seen[i] {
+			t.Errorf("order_number %d が抜けています", i)
+		}
+	}
+}
+
+func TestCreateTicket_Errors(t *testing.T) {
+	e, gdb := newTestServer(t)
+	open := createStall(t, gdb, "A-01", domain.BusinessStatusOpen)
+
+	tests := []struct {
+		name     string
+		stallID  uint
+		body     string
+		want     int
+		wantCode string
+	}{
+		{"存在しない屋台", 999, `{}`, http.StatusNotFound, "not_found"},
+		{"備考が長すぎる", open.ID, `{"comment":"` + strings.Repeat("あ", 201) + `"}`, http.StatusBadRequest, "bad_request"},
+	}
+	for _, status := range []domain.BusinessStatus{domain.BusinessStatusPreparing, domain.BusinessStatusSoldOut, domain.BusinessStatusClosed} {
+		s := createStall(t, gdb, "B-"+string(status), status)
+		tests = append(tests, struct {
+			name     string
+			stallID  uint
+			body     string
+			want     int
+			wantCode string
+		}{"営業中でない（" + string(status) + "）", s.ID, `{}`, http.StatusConflict, "stall_not_open"})
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			rec := doRequest(e, http.MethodPost, "/api/stalls/"+itoa(tt.stallID)+"/tickets", tt.body)
+			if rec.Code != tt.want || !strings.Contains(rec.Body.String(), `"code":"`+tt.wantCode+`"`) {
+				t.Errorf("status = %d, body = %s", rec.Code, rec.Body)
+			}
+		})
+	}
+
+	// ちょうど 200 文字なら発券できる
+	issueTicket(t, e, open.ID, `{"comment":"`+strings.Repeat("あ", 200)+`"}`)
+}

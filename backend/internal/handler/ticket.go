@@ -13,7 +13,15 @@ func (h *Handler) ListStallTickets(ctx context.Context, req gen.ListStallTickets
 
 // CreateTicket は POST /stalls/{stallId}/tickets。
 func (h *Handler) CreateTicket(ctx context.Context, req gen.CreateTicketRequestObject) (gen.CreateTicketResponseObject, error) {
-	return nil, errNotImplemented
+	var comment *string
+	if req.Body != nil {
+		comment = req.Body.Comment
+	}
+	t, err := h.tickets.Create(ctx, toID(req.StallId), comment)
+	if err != nil {
+		return nil, err
+	}
+	return gen.CreateTicket201JSONResponse(toTicket(t)), nil
 }
 
 // GetTicket は GET /tickets/{publicToken}。

@@ -30,7 +30,9 @@ func main() {
 	}
 
 	stallRepo := repository.NewStallRepository(gdb)
+	ticketRepo := repository.NewTicketRepository(gdb)
 	stallUsecase := usecase.NewStallUsecase(stallRepo)
+	ticketUsecase := usecase.NewTicketUsecase(stallRepo, ticketRepo)
 
 	e := echo.New()
 	e.HideBanner = true
@@ -40,7 +42,7 @@ func main() {
 
 	// API はすべて /api の下に置く（openapi.yaml の servers と合わせる）。
 	// それ以外の URL は、FE の静的ファイルを返すために空けておく。
-	h := handler.New(stallUsecase)
+	h := handler.New(stallUsecase, ticketUsecase)
 	gen.RegisterHandlersWithBaseURL(e, gen.NewStrictHandler(h, nil), "/api")
 
 	port := os.Getenv("PORT")

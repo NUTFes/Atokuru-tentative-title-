@@ -28,7 +28,8 @@ func newTestServer(t *testing.T) (*echo.Echo, *gorm.DB) {
 		t.Fatal(err)
 	}
 	stallRepo := repository.NewStallRepository(gdb)
-	h := New(usecase.NewStallUsecase(stallRepo))
+	ticketRepo := repository.NewTicketRepository(gdb)
+	h := New(usecase.NewStallUsecase(stallRepo), usecase.NewTicketUsecase(stallRepo, ticketRepo))
 
 	e := echo.New()
 	e.HTTPErrorHandler = HTTPErrorHandler
