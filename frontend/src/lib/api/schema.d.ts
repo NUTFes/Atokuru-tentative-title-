@@ -150,6 +150,53 @@ export interface paths {
         patch: operations["updateTicketStatus"];
         trace?: never;
     };
+    "/push/vapid-public-key": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * 通知の購読に使う VAPID 公開鍵を取得する
+         * @description FE が `pushManager.subscribe` の `applicationServerKey` に渡す公開鍵（base64url）を返す。
+         *     FE は静的エクスポートでビルド時に鍵を埋め込めないので、API で渡す。
+         *     サーバーに鍵が設定されていない（通知を使わない）ときは 503 を返す。FE は通知のボタンを出さない。
+         */
+        get: operations["getVapidPublicKey"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/tickets/{publicToken}/push-subscriptions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 整理券の通知の購読を登録する
+         * @description 来場者が使う。リクエストは、ブラウザの `PushSubscription.toJSON()` をそのまま送ればよい。
+         *     整理券の ID は連番なので、推測されにくい `public_token` で指定する（他人の整理券に通知を登録されないように）。
+         *     同じ整理券に同じ `endpoint` をもう一度登録したときは上書きする（エラーにしない）。
+         *     1つの端末で複数の整理券を持てるので、整理券ごとに登録する。
+         *     受け取り済み（`received`）の整理券には登録できず、400 を返す。
+         *     解除する API はない。受け取り済みになったら送らなくなり、プッシュサーバーが無効と返した購読はサーバーが消す。
+         */
+        post: operations["createPushSubscription"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -163,7 +210,7 @@ export interface components {
         };
         /**
          * @description 失敗したときに返す形。`code` はプログラムで見分けるため、`message` は人が読むための文。
-         *     code の種類：`bad_request` / `not_found` / `stall_not_open` / `internal_error`
+         *     code の種類：`bad_request` / `not_found` / `stall_not_open` / `push_unavailable` / `internal_error`
          */
         Error: {
             /** @example not_found */
@@ -314,6 +361,35 @@ export interface components {
         UpdateBusinessStatusRequest: {
             business_status: components["schemas"]["BusinessStatus"];
         };
+        VapidPublicKey: {
+            /**
+             * @description VAPID 公開鍵（base64url）
+             * @example BEl62iUYgUivxIkv69yViEuiBIa-Ib9-SkvMeAtA3LFgDzkrxZJjSgSnfckjBJuBkr3qBUYIHBQFLXYp5Nksh8U
+             */
+            public_key: string;
+        };
+        /**
+         * @description ブラウザの `PushSubscription.toJSON()` の形。項目名はブラウザに合わせているので snake_case ではない。
+         *     `endpoint` は https の URL にする（サーバーはこの URL に通知を送る）。
+         */
+        PushSubscription: {
+            /**
+             * @description プッシュサーバーの URL（https）
+             * @example https://fcm.googleapis.com/fcm/send/abc123
+             */
+            endpoint: string;
+            /**
+             * Format: double
+             * @description ブラウザが付けてくる有効期限。サーバーでは使わない
+             */
+            expirationTime?: number | null;
+            keys: {
+                /** @description 通知を暗号化するための公開鍵（base64url） */
+                p256dh: string;
+                /** @description 通知を暗号化するための認証用の値（base64url） */
+                auth: string;
+            };
+        };
     };
     responses: {
         /** @description リクエストの形や値が正しくない */
@@ -356,6 +432,21 @@ export interface components {
                  * @example {
                  *       "code": "stall_not_open",
                  *       "message": "営業中でない屋台では整理券を発行できません"
+                 *     }
+                 */
+                "application/json": components["schemas"]["Error"];
+            };
+        };
+        /** @description サーバーに VAPID の鍵が設定されておらず、通知を使えない */
+        PushUnavailable: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                /**
+                 * @example {
+                 *       "code": "push_unavailable",
+                 *       "message": "通知は使えません"
                  *     }
                  */
                 "application/json": components["schemas"]["Error"];
@@ -597,6 +688,56 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["Ticket"];
                 };
+            };
+            400: components["responses"]["BadRequest"];
+            404: components["responses"]["NotFound"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    getVapidPublicKey: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description VAPID 公開鍵 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VapidPublicKey"];
+                };
+            };
+            500: components["responses"]["InternalError"];
+            503: components["responses"]["PushUnavailable"];
+        };
+    };
+    createPushSubscription: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description 整理券の public_token */
+                publicToken: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PushSubscription"];
+            };
+        };
+        responses: {
+            /** @description 登録した */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             400: components["responses"]["BadRequest"];
             404: components["responses"]["NotFound"];

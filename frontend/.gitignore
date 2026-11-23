@@ -39,3 +39,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# sw.js が通知の文言に使う辞書（npm run copy-locales で src/locales からコピーする）
+/public/locales/
