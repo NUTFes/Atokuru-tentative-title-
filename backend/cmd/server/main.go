@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -41,9 +42,17 @@ func main() {
 	e.Use(middleware.Recover())
 
 	// API はすべて /api の下に置く（openapi.yaml の servers と合わせる）。
-	// それ以外の URL は、FE の静的ファイルを返すために空けておく。
 	h := handler.New(stallUsecase, ticketUsecase)
 	gen.RegisterHandlersWithBaseURL(e, gen.NewStrictHandler(h, nil), "/api")
+
+	// /api 以外の URL では FE（Next.js の静的エクスポート）のファイルを返す。
+	if dir := os.Getenv("STATIC_DIR"); dir != "" {
+		handler.ServeFrontend(e, dir)
+	}
+	// ローカルで next dev から API を呼ぶときだけ CORS を許可する（本番は同じオリジンなので不要）。
+	if origins := os.Getenv("CORS_ALLOW_ORIGINS"); origins != "" {
+		handler.AllowCORS(e, strings.Split(origins, ","))
+	}
 
 	port := os.Getenv("PORT")
 	if port == "" {

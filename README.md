@@ -147,6 +147,8 @@
 | `TURSO_DATABASE_URL` | DB の URL（`libsql://...`、手元で試すときは `file:local.db`） | なし | Turso の DB の URL |
 | `TURSO_AUTH_TOKEN` | Turso の接続トークン（`file:` のときは空） | なし | `turso db tokens create` で発行したもの |
 | `PORT` | API サーバーのポート | `8080` | `8080` |
+| `STATIC_DIR` | FE のビルド結果（`frontend/out/`）の場所。設定すると `/api` 以外の URL で FE のページを返す | なし（API だけ動かす） | 空（`next dev` を使う） |
+| `CORS_ALLOW_ORIGINS` | 別のオリジンから API を呼ぶことを許可する（カンマ区切り）。本番は同じオリジンなので空 | なし | `http://localhost:3000` |
 
 `backend/.env.example` を `backend/.env` にコピーして値を埋めてください。
 
