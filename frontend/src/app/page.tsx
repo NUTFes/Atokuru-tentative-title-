@@ -3,11 +3,24 @@
 import { useCallback, useEffect, useState } from "react";
 
 import { UserBottomNav } from "@/components/nav/user-bottom-nav";
+import { NotificationPrompt } from "@/components/ticket/notification-prompt";
 import { TicketCard } from "@/components/ticket/ticket-card";
 import { Button } from "@/components/ui/button";
 import { api, type TicketDetail } from "@/lib/api/client";
 import { useT } from "@/lib/i18n";
-import { addTicketToken, loadTicketTokens, removeTicketToken } from "@/lib/storage";
+import {
+  isPushSupported,
+  notificationPermission,
+  requestNotificationPermission,
+  subscribePush,
+} from "@/lib/push";
+import {
+  addTicketToken,
+  loadPushRegisteredTokens,
+  loadTicketTokens,
+  removeTicketToken,
+  savePushRegisteredToken,
+} from "@/lib/storage";
 import { useOnVisible } from "@/lib/use-on-visible";
 
 type Notice = "added" | "alreadyAdded" | "notFound" | null;
@@ -27,10 +40,75 @@ async function fetchTicket(publicToken: string): Promise<TicketDetail | null> {
   throw new Error(`GET /tickets/{publicToken} が ${response.status} を返しました`);
 }
 
+/** 通知に使う VAPID 公開鍵を取る。通知を使えない（サーバーに鍵がない・端末が対応していない）ときは null */
+async function fetchVapidPublicKey(): Promise<string | null> {
+  if (!isPushSupported()) return null;
+  try {
+    const { data } = await api.GET("/push/vapid-public-key");
+    return data?.public_key ?? null;
+  } catch (error) {
+    console.error(error);
+    return null;
+  }
+}
+
+/**
+ * まだ登録していない整理券に、通知の購読を登録する。
+ * 1つの端末で複数の整理券を持てるので、整理券ごとに登録する。受け取り済みには登録できない。
+ */
+async function registerPush(vapidPublicKey: string, tickets: TicketDetail[]): Promise<void> {
+  const registered = loadPushRegisteredTokens();
+  const targets = tickets.filter(
+    (ticket) => ticket.status !== "received" && !registered.includes(ticket.public_token),
+  );
+  if (targets.length === 0) return;
+  const subscription = await subscribePush(vapidPublicKey);
+  if (!subscription?.endpoint || !subscription.keys?.p256dh || !subscription.keys.auth) return;
+  const body = {
+    endpoint: subscription.endpoint,
+    expirationTime: subscription.expirationTime ?? null,
+    keys: { p256dh: subscription.keys.p256dh, auth: subscription.keys.auth },
+  };
+  for (const ticket of targets) {
+    const { response } = await api.POST("/tickets/{publicToken}/push-subscriptions", {
+      params: { path: { publicToken: ticket.public_token } },
+      body,
+    });
+    if (response.ok) savePushRegisteredToken(ticket.public_token);
+  }
+}
+
 export default function Home() {
   const { t } = useT();
   const [state, setState] = useState<LoadState>({ kind: "loading" });
   const [notice, setNotice] = useState<Notice>(null);
+  // 通知：使えないときは null で、ボタンを出さない
+  const [vapidPublicKey, setVapidPublicKey] = useState<string | null>(null);
+  const [permission, setPermission] = useState<NotificationPermission>("default");
+  const [enabling, setEnabling] = useState(false);
+
+  useEffect(() => {
+    void fetchVapidPublicKey().then((key) => {
+      setVapidPublicKey(key);
+      if (key) setPermission(notificationPermission());
+    });
+  }, []);
+
+  // すでに許可されていれば、新しく保存した整理券にも購読を登録する
+  useEffect(() => {
+    if (!vapidPublicKey || permission !== "granted" || state.kind !== "loaded") return;
+    registerPush(vapidPublicKey, state.tickets).catch((error) => console.error(error));
+  }, [vapidPublicKey, permission, state]);
+
+  const enableNotification = async () => {
+    setEnabling(true);
+    try {
+      setPermission(await requestNotificationPermission());
+    } catch (error) {
+      console.error(error);
+    }
+    setEnabling(false);
+  };
 
   // QR コードの URL（/?token=...）で開いたら、整理券を保存して URL から token を消す
   useEffect(() => {
@@ -86,6 +164,16 @@ export default function Home() {
           </Button>
         </div>
       )}
+
+      {vapidPublicKey &&
+        state.kind === "loaded" &&
+        state.tickets.some((ticket) => ticket.status !== "received") && (
+          <NotificationPrompt
+            permission={permission}
+            onEnable={() => void enableNotification()}
+            busy={enabling}
+          />
+        )}
 
       {state.kind === "loaded" &&
         (state.tickets.length === 0 ? (

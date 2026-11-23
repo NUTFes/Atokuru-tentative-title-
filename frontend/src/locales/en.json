@@ -124,5 +124,13 @@
     "installTitle": "Add to Home Screen",
     "installBody": "Tap the Share button {share} and choose \"Add to Home Screen\" to get notified when your order is ready",
     "dismiss": "Close"
+  },
+  "notification": {
+    "enable": "Get notified when your order is ready",
+    "enabled": "We'll notify you when your order is ready",
+    "denied": "Notifications are blocked. Please check this screen instead",
+    "title": "{stallName} No. {number}",
+    "ready": "Your order is ready. Please pick it up at the stall",
+    "near": "{count} ahead of you. Please wait near the stall"
   }
 }

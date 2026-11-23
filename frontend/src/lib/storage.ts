@@ -87,3 +87,21 @@ export function clearStallId(): void {
     // 消せなくても画面はそのまま動かす
   }
 }
+
+const PUSH_REGISTERED_KEY = "atokuru:push-registered-tokens";
+
+/** 通知の購読をサーバーに登録した整理券の public_token の一覧 */
+export function loadPushRegisteredTokens(): string[] {
+  try {
+    const value: unknown = JSON.parse(read(PUSH_REGISTERED_KEY) ?? "[]");
+    return Array.isArray(value) ? value.filter((v): v is string => typeof v === "string") : [];
+  } catch {
+    return [];
+  }
+}
+
+/** 通知の購読をサーバーに登録した整理券を覚える（同じ整理券に何度も登録しないため） */
+export function savePushRegisteredToken(token: string): void {
+  const tokens = loadPushRegisteredTokens();
+  if (!tokens.includes(token)) write(PUSH_REGISTERED_KEY, JSON.stringify([...tokens, token]));
+}
