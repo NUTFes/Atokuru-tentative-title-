@@ -126,6 +126,16 @@
 
 バックエンドの依存の向きは handler → usecase → repository → domain の一方向です。フロントエンドで API を呼ぶのは `app/` の中だけにして、`components/` は見た目だけを担当します。詳しくは [AGENTS.md](AGENTS.md) を見てください。
 
+### フロントエンドの設計方針
+
+- `app/` は URL に対応するページを置き、API 通信、データ取得・更新、画面の状態管理を担当します。API を呼び出すのは `app/` の中だけです。
+- `components/` は表示に専念し、表示データとイベント callback を props で受け取ります。API クライアントやページのデータ管理を import しません。
+- `components/ticket/` や `components/map/` には機能ごとの UI、`components/ui/` には shadcn/ui の共通 UI を置きます。共通 UI を直接変更せず、必要に応じて機能コンポーネントで包みます。
+- `lib/api/` には OpenAPI から生成した型と API クライアントを置きます。API の変更は `openapi/openapi.yaml` を起点にします。
+- 画面文言は `locales/` の辞書を使います。Next.js は静的エクスポートするため、API Routes、Server Actions、SSR は使いません。
+
+shadcn/ui のコンポーネントは `frontend/` で `npx shadcn@latest add <component>`（例: `npx shadcn@latest add button`）を実行して追加します。生成先は `src/components/ui/` です。
+
 <p align="right">(<a href="#top">トップへ</a>)</p>
 
 ## 開発環境構築
@@ -174,6 +184,7 @@ DB の接続情報などの秘密情報は `.env` に書き、Git には上げ�
 | `npm run dev` | 開発サーバーを起動する（http://localhost:3000） |
 | `npm run build` | 静的エクスポートでビルドする。`frontend/out/` に HTML・CSS・JS ができる |
 | `npm run lint` | ESLint でチェックする |
+| `npx shadcn@latest add <component>` | shadcn/ui のコンポーネントを `src/components/ui/` に追加する |
 
 Docker でビルドだけを確かめるときは、`frontend/` で `docker build --target build .` を実行します。
 
