@@ -116,5 +116,10 @@
   "language": {
     "ja": "日本語",
     "en": "English"
+  },
+  "pwa": {
+    "installTitle": "Add to Home Screen",
+    "installBody": "Tap the Share button {share} and choose \"Add to Home Screen\" to get notified when your order is ready",
+    "dismiss": "Close"
   }
 }

@@ -1,0 +1,16 @@
+{
+  "name": "アトクル",
+  "short_name": "アトクル",
+  "description": "学園祭の模擬店の整理券アプリ",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "lang": "ja",
+  "background_color": "#ffffff",
+  "theme_color": "#ea580c",
+  "icons": [
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

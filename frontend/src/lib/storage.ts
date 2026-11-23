@@ -28,3 +28,15 @@ export function loadLocale(): string | null {
 export function saveLocale(locale: string): void {
   write(LOCALE_KEY, locale);
 }
+
+const INSTALL_GUIDE_DISMISSED_KEY = "atokuru:install-guide-dismissed";
+
+/** ホーム画面に追加の案内を閉じたか */
+export function loadInstallGuideDismissed(): boolean {
+  return read(INSTALL_GUIDE_DISMISSED_KEY) === "1";
+}
+
+/** ホーム画面に追加の案内を閉じたことを保存する */
+export function saveInstallGuideDismissed(): void {
+  write(INSTALL_GUIDE_DISMISSED_KEY, "1");
+}
