@@ -30,6 +30,7 @@ func main() {
 
 	e := echo.New()
 	e.HideBanner = true
+	e.HTTPErrorHandler = handler.HTTPErrorHandler
 	e.Use(middleware.RequestLogger())
 	e.Use(middleware.Recover())
 
