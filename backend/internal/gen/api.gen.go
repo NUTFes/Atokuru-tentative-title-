@@ -14,10 +14,60 @@ import (
 	"net/url"
 	"path"
 	"strings"
+	"time"
 
 	"github.com/getkin/kin-openapi/openapi3"
 	"github.com/labstack/echo/v4"
+	"github.com/oapi-codegen/runtime"
 )
+
+// Defines values for BusinessStatus.
+const (
+	Closed    BusinessStatus = "closed"
+	Open      BusinessStatus = "open"
+	Preparing BusinessStatus = "preparing"
+	SoldOut   BusinessStatus = "sold_out"
+)
+
+// Valid indicates whether the value is a known member of the BusinessStatus enum.
+func (e BusinessStatus) Valid() bool {
+	switch e {
+	case Closed:
+		return true
+	case Open:
+		return true
+	case Preparing:
+		return true
+	case SoldOut:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for Congestion.
+const (
+	Gray   Congestion = "gray"
+	Green  Congestion = "green"
+	Red    Congestion = "red"
+	Yellow Congestion = "yellow"
+)
+
+// Valid indicates whether the value is a known member of the Congestion enum.
+func (e Congestion) Valid() bool {
+	switch e {
+	case Gray:
+		return true
+	case Green:
+		return true
+	case Red:
+		return true
+	case Yellow:
+		return true
+	default:
+		return false
+	}
+}
 
 // Defines values for HealthStatus.
 const (
@@ -34,6 +84,73 @@ func (e HealthStatus) Valid() bool {
 	}
 }
 
+// Defines values for TicketStatus.
+const (
+	Ready    TicketStatus = "ready"
+	Received TicketStatus = "received"
+	Waiting  TicketStatus = "waiting"
+)
+
+// Valid indicates whether the value is a known member of the TicketStatus enum.
+func (e TicketStatus) Valid() bool {
+	switch e {
+	case Ready:
+		return true
+	case Received:
+		return true
+	case Waiting:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ListStallTicketsParamsOrder.
+const (
+	Asc  ListStallTicketsParamsOrder = "asc"
+	Desc ListStallTicketsParamsOrder = "desc"
+)
+
+// Valid indicates whether the value is a known member of the ListStallTicketsParamsOrder enum.
+func (e ListStallTicketsParamsOrder) Valid() bool {
+	switch e {
+	case Asc:
+		return true
+	case Desc:
+		return true
+	default:
+		return false
+	}
+}
+
+// BusinessStatus 屋台の営業状況。open（営業中）/ preparing（準備中）/ sold_out（売り切れ）/ closed（閉店）
+//
+// Example: open
+type BusinessStatus string
+
+// Congestion 混雑度。red / yellow / green / gray（営業中でない店は gray）
+//
+// Example: green
+type Congestion string
+
+// CreateTicketRequest defines model for CreateTicketRequest.
+type CreateTicketRequest struct {
+	// Comment 備考（メニューなど）。なければ省略するか null
+	//
+	// Example: 焼きそば 大盛り
+	Comment *string `json:"comment,omitempty"`
+}
+
+// Error 失敗したときに返す形。`code` はプログラムで見分けるため、`message` は人が読むための文。
+// code の種類：`bad_request` / `not_found` / `stall_not_open` / `internal_error`
+type Error struct {
+	// Code Example: not_found
+	Code string `json:"code"`
+
+	// Message Example: 屋台が見つかりません
+	Message string `json:"message"`
+}
+
 // Health defines model for Health.
 type Health struct {
 	// Status Example: ok
@@ -43,11 +160,222 @@ type Health struct {
 // HealthStatus Example: ok
 type HealthStatus string
 
+// Stall 屋台。パスワードは返さない
+type Stall struct {
+	// BusinessStatus 屋台の営業状況。open（営業中）/ preparing（準備中）/ sold_out（売り切れ）/ closed（閉店）
+	//
+	// Example: open
+	BusinessStatus BusinessStatus `json:"business_status"`
+
+	// HpLink HP のリンク。ない店は null
+	//
+	// Example: https://example.com
+	HpLink *string `json:"hp_link"`
+
+	// Id Example: 1
+	Id int64 `json:"id"`
+
+	// Name Example: 焼きそば研究会
+	Name string `json:"name"`
+
+	// StallNumber 店番号（パンフレットなどに載っている番号）
+	//
+	// Example: A-01
+	StallNumber string `json:"stall_number"`
+}
+
+// StallSummary マップ用の屋台の情報
+type StallSummary struct {
+	// BusinessStatus 屋台の営業状況。open（営業中）/ preparing（準備中）/ sold_out（売り切れ）/ closed（閉店）
+	//
+	// Example: open
+	BusinessStatus BusinessStatus `json:"business_status"`
+
+	// Congestion 混雑度。red / yellow / green / gray（営業中でない店は gray）
+	//
+	// Example: green
+	Congestion Congestion `json:"congestion"`
+
+	// HpLink Example: https://example.com
+	HpLink *string `json:"hp_link"`
+
+	// Id Example: 1
+	Id int64 `json:"id"`
+
+	// Name Example: 焼きそば研究会
+	Name string `json:"name"`
+
+	// StallNumber Example: A-01
+	StallNumber string `json:"stall_number"`
+
+	// WaitingCount status が waiting の整理券の数
+	//
+	// Example: 8
+	WaitingCount int `json:"waiting_count"`
+}
+
+// Ticket 整理券（模擬店画面で使う）
+type Ticket struct {
+	// CalledAt 調理完了（ready）にした時刻。まだなら null
+	CalledAt *time.Time `json:"called_at"`
+
+	// Comment 備考（メニューなど）。ない場合は null
+	//
+	// Example: 焼きそば 大盛り
+	Comment *string `json:"comment"`
+
+	// CreatedAt 発行した時刻
+	CreatedAt time.Time `json:"created_at"`
+
+	// Id 整理券の ID（連番）。URL や QR コードには使わない
+	//
+	// Example: 123
+	Id int64 `json:"id"`
+
+	// OrderNumber 屋台ごとの整理券番号（1 から）
+	//
+	// Example: 42
+	OrderNumber int `json:"order_number"`
+
+	// PublicToken 推測されにくいランダムな文字列。QR コードの URL に入れる
+	//
+	// Example: Zp3kq8vN2xYcR7tLm1aB0w
+	PublicToken string `json:"public_token"`
+
+	// StallId Example: 1
+	StallId int64 `json:"stall_id"`
+
+	// Status 整理券の状態。waiting（調理中）/ ready（調理完了）/ received（受け取り済み）
+	//
+	// Example: waiting
+	Status    TicketStatus `json:"status"`
+	UpdatedAt time.Time    `json:"updated_at"`
+}
+
+// TicketDetail 整理券（来場者のユーザー画面で使う）。連番の id は返さない
+type TicketDetail struct {
+	CalledAt *time.Time `json:"called_at"`
+
+	// Comment Example: 焼きそば 大盛り
+	Comment   *string   `json:"comment"`
+	CreatedAt time.Time `json:"created_at"`
+
+	// OrderNumber Example: 42
+	OrderNumber int `json:"order_number"`
+
+	// PeopleAhead 自分の前に何人いるか
+	//
+	// Example: 3
+	PeopleAhead int `json:"people_ahead"`
+
+	// PublicToken Example: Zp3kq8vN2xYcR7tLm1aB0w
+	PublicToken string `json:"public_token"`
+
+	// StallId Example: 1
+	StallId int64 `json:"stall_id"`
+
+	// StallName Example: 焼きそば研究会
+	StallName string `json:"stall_name"`
+
+	// StallNumber Example: A-01
+	StallNumber string `json:"stall_number"`
+
+	// Status 整理券の状態。waiting（調理中）/ ready（調理完了）/ received（受け取り済み）
+	//
+	// Example: waiting
+	Status TicketStatus `json:"status"`
+}
+
+// TicketStatus 整理券の状態。waiting（調理中）/ ready（調理完了）/ received（受け取り済み）
+//
+// Example: waiting
+type TicketStatus string
+
+// UpdateBusinessStatusRequest defines model for UpdateBusinessStatusRequest.
+type UpdateBusinessStatusRequest struct {
+	// BusinessStatus 屋台の営業状況。open（営業中）/ preparing（準備中）/ sold_out（売り切れ）/ closed（閉店）
+	//
+	// Example: open
+	BusinessStatus BusinessStatus `json:"business_status"`
+}
+
+// UpdateTicketStatusRequest defines model for UpdateTicketStatusRequest.
+type UpdateTicketStatusRequest struct {
+	// Status 整理券の状態。waiting（調理中）/ ready（調理完了）/ received（受け取り済み）
+	//
+	// Example: waiting
+	Status TicketStatus `json:"status"`
+}
+
+// StallId defines model for StallId.
+type StallId = int64
+
+// BadRequest 失敗したときに返す形。`code` はプログラムで見分けるため、`message` は人が読むための文。
+// code の種類：`bad_request` / `not_found` / `stall_not_open` / `internal_error`
+type BadRequest = Error
+
+// Conflict 失敗したときに返す形。`code` はプログラムで見分けるため、`message` は人が読むための文。
+// code の種類：`bad_request` / `not_found` / `stall_not_open` / `internal_error`
+type Conflict = Error
+
+// InternalError 失敗したときに返す形。`code` はプログラムで見分けるため、`message` は人が読むための文。
+// code の種類：`bad_request` / `not_found` / `stall_not_open` / `internal_error`
+type InternalError = Error
+
+// NotFound 失敗したときに返す形。`code` はプログラムで見分けるため、`message` は人が読むための文。
+// code の種類：`bad_request` / `not_found` / `stall_not_open` / `internal_error`
+type NotFound = Error
+
+// ListStallTicketsParams defines parameters for ListStallTickets.
+type ListStallTicketsParams struct {
+	// Status 取得する整理券の status。複数指定できる
+	Status []TicketStatus `form:"status" json:"status"`
+
+	// Limit 最大の件数
+	Limit *int `form:"limit,omitempty" json:"limit,omitempty"`
+
+	// Order order_number の並び順
+	Order *ListStallTicketsParamsOrder `form:"order,omitempty" json:"order,omitempty"`
+}
+
+// ListStallTicketsParamsOrder defines parameters for ListStallTickets.
+type ListStallTicketsParamsOrder string
+
+// UpdateBusinessStatusJSONRequestBody defines body for UpdateBusinessStatus for application/json ContentType.
+type UpdateBusinessStatusJSONRequestBody = UpdateBusinessStatusRequest
+
+// CreateTicketJSONRequestBody defines body for CreateTicket for application/json ContentType.
+type CreateTicketJSONRequestBody = CreateTicketRequest
+
+// UpdateTicketStatusJSONRequestBody defines body for UpdateTicketStatus for application/json ContentType.
+type UpdateTicketStatusJSONRequestBody = UpdateTicketStatusRequest
+
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
 	// GetHealth サーバーが動いているかを確認する
 	// (GET /health)
 	GetHealth(ctx echo.Context) error
+	// ListStalls 全ての屋台の混雑度・営業状況・HP リンクを取得する（マップ用）
+	// (GET /stalls)
+	ListStalls(ctx echo.Context) error
+	// GetStall 指定した ID の屋台を取得する（パスワード以外）
+	// (GET /stalls/{stallId})
+	GetStall(ctx echo.Context, stallId StallId) error
+	// UpdateBusinessStatus 指定した屋台の営業状況を変更する
+	// (PATCH /stalls/{stallId}/business-status)
+	UpdateBusinessStatus(ctx echo.Context, stallId StallId) error
+	// ListStallTickets 指定した屋台の整理券の一覧を取得する
+	// (GET /stalls/{stallId}/tickets)
+	ListStallTickets(ctx echo.Context, stallId StallId, params ListStallTicketsParams) error
+	// CreateTicket 整理券を発行する
+	// (POST /stalls/{stallId}/tickets)
+	CreateTicket(ctx echo.Context, stallId StallId) error
+	// GetTicket 指定した整理券を取得する（前に何人を含む）
+	// (GET /tickets/{publicToken})
+	GetTicket(ctx echo.Context, publicToken string) error
+	// UpdateTicketStatus 指定した整理券の status を変更する
+	// (PATCH /tickets/{ticketId}/status)
+	UpdateTicketStatus(ctx echo.Context, ticketId int64) error
 }
 
 // ServerInterfaceWrapper converts echo contexts to parameters.
@@ -61,6 +389,134 @@ func (w *ServerInterfaceWrapper) GetHealth(ctx echo.Context) error {
 
 	// Invoke the callback with all the unmarshaled arguments
 	err = w.Handler.GetHealth(ctx)
+	return err
+}
+
+// ListStalls converts echo context to params.
+func (w *ServerInterfaceWrapper) ListStalls(ctx echo.Context) error {
+	var err error
+
+	// Invoke the callback with all the unmarshaled arguments
+	err = w.Handler.ListStalls(ctx)
+	return err
+}
+
+// GetStall converts echo context to params.
+func (w *ServerInterfaceWrapper) GetStall(ctx echo.Context) error {
+	var err error
+	// ------------- Path parameter "stallId" -------------
+	var stallId StallId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "stallId", ctx.Param("stallId"), &stallId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "int64", ValueIsUnescaped: ctx.Request().URL.RawPath == ""})
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Invalid format for parameter stallId: %s", err))
+	}
+
+	// Invoke the callback with all the unmarshaled arguments
+	err = w.Handler.GetStall(ctx, stallId)
+	return err
+}
+
+// UpdateBusinessStatus converts echo context to params.
+func (w *ServerInterfaceWrapper) UpdateBusinessStatus(ctx echo.Context) error {
+	var err error
+	// ------------- Path parameter "stallId" -------------
+	var stallId StallId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "stallId", ctx.Param("stallId"), &stallId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "int64", ValueIsUnescaped: ctx.Request().URL.RawPath == ""})
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Invalid format for parameter stallId: %s", err))
+	}
+
+	// Invoke the callback with all the unmarshaled arguments
+	err = w.Handler.UpdateBusinessStatus(ctx, stallId)
+	return err
+}
+
+// ListStallTickets converts echo context to params.
+func (w *ServerInterfaceWrapper) ListStallTickets(ctx echo.Context) error {
+	var err error
+	// ------------- Path parameter "stallId" -------------
+	var stallId StallId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "stallId", ctx.Param("stallId"), &stallId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "int64", ValueIsUnescaped: ctx.Request().URL.RawPath == ""})
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Invalid format for parameter stallId: %s", err))
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListStallTicketsParams
+	// ------------- Required query parameter "status" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "status", ctx.QueryParams(), &params.Status, runtime.BindQueryParameterOptions{Type: "array", Format: ""})
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Invalid format for parameter status: %s", err))
+	}
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", ctx.QueryParams(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Invalid format for parameter limit: %s", err))
+	}
+
+	// ------------- Optional query parameter "order" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "order", ctx.QueryParams(), &params.Order, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Invalid format for parameter order: %s", err))
+	}
+
+	// Invoke the callback with all the unmarshaled arguments
+	err = w.Handler.ListStallTickets(ctx, stallId, params)
+	return err
+}
+
+// CreateTicket converts echo context to params.
+func (w *ServerInterfaceWrapper) CreateTicket(ctx echo.Context) error {
+	var err error
+	// ------------- Path parameter "stallId" -------------
+	var stallId StallId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "stallId", ctx.Param("stallId"), &stallId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "int64", ValueIsUnescaped: ctx.Request().URL.RawPath == ""})
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Invalid format for parameter stallId: %s", err))
+	}
+
+	// Invoke the callback with all the unmarshaled arguments
+	err = w.Handler.CreateTicket(ctx, stallId)
+	return err
+}
+
+// GetTicket converts echo context to params.
+func (w *ServerInterfaceWrapper) GetTicket(ctx echo.Context) error {
+	var err error
+	// ------------- Path parameter "publicToken" -------------
+	var publicToken string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "publicToken", ctx.Param("publicToken"), &publicToken, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: ctx.Request().URL.RawPath == ""})
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Invalid format for parameter publicToken: %s", err))
+	}
+
+	// Invoke the callback with all the unmarshaled arguments
+	err = w.Handler.GetTicket(ctx, publicToken)
+	return err
+}
+
+// UpdateTicketStatus converts echo context to params.
+func (w *ServerInterfaceWrapper) UpdateTicketStatus(ctx echo.Context) error {
+	var err error
+	// ------------- Path parameter "ticketId" -------------
+	var ticketId int64
+
+	err = runtime.BindStyledParameterWithOptions("simple", "ticketId", ctx.Param("ticketId"), &ticketId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "int64", ValueIsUnescaped: ctx.Request().URL.RawPath == ""})
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Invalid format for parameter ticketId: %s", err))
+	}
+
+	// Invoke the callback with all the unmarshaled arguments
+	err = w.Handler.UpdateTicketStatus(ctx, ticketId)
 	return err
 }
 
@@ -112,8 +568,23 @@ func RegisterHandlersWithOptions(router EchoRouter, si ServerInterface, options 
 	}
 
 	router.GET(options.BaseURL+"/health", wrapper.GetHealth, options.OperationMiddlewares["getHealth"]...)
+	router.GET(options.BaseURL+"/stalls", wrapper.ListStalls, options.OperationMiddlewares["listStalls"]...)
+	router.GET(options.BaseURL+"/stalls/:stallId", wrapper.GetStall, options.OperationMiddlewares["getStall"]...)
+	router.PATCH(options.BaseURL+"/stalls/:stallId/business-status", wrapper.UpdateBusinessStatus, options.OperationMiddlewares["updateBusinessStatus"]...)
+	router.GET(options.BaseURL+"/stalls/:stallId/tickets", wrapper.ListStallTickets, options.OperationMiddlewares["listStallTickets"]...)
+	router.POST(options.BaseURL+"/stalls/:stallId/tickets", wrapper.CreateTicket, options.OperationMiddlewares["createTicket"]...)
+	router.GET(options.BaseURL+"/tickets/:publicToken", wrapper.GetTicket, options.OperationMiddlewares["getTicket"]...)
+	router.PATCH(options.BaseURL+"/tickets/:ticketId/status", wrapper.UpdateTicketStatus, options.OperationMiddlewares["updateTicketStatus"]...)
 
 }
+
+type BadRequestJSONResponse Error
+
+type ConflictJSONResponse Error
+
+type InternalErrorJSONResponse Error
+
+type NotFoundJSONResponse Error
 
 type GetHealthRequestObject struct {
 }
@@ -136,11 +607,455 @@ func (response GetHealth200JSONResponse) VisitGetHealthResponse(w http.ResponseW
 	return err
 }
 
+type ListStallsRequestObject struct {
+}
+
+type ListStallsResponseObject interface {
+	VisitListStallsResponse(w http.ResponseWriter) error
+}
+
+type ListStalls200JSONResponse []StallSummary
+
+func (response ListStalls200JSONResponse) VisitListStallsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListStalls500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response ListStalls500JSONResponse) VisitListStallsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetStallRequestObject struct {
+	StallId StallId `json:"stallId"`
+}
+
+type GetStallResponseObject interface {
+	VisitGetStallResponse(w http.ResponseWriter) error
+}
+
+type GetStall200JSONResponse Stall
+
+func (response GetStall200JSONResponse) VisitGetStallResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetStall400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response GetStall400JSONResponse) VisitGetStallResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetStall404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response GetStall404JSONResponse) VisitGetStallResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetStall500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response GetStall500JSONResponse) VisitGetStallResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateBusinessStatusRequestObject struct {
+	StallId StallId `json:"stallId"`
+	Body    *UpdateBusinessStatusJSONRequestBody
+}
+
+type UpdateBusinessStatusResponseObject interface {
+	VisitUpdateBusinessStatusResponse(w http.ResponseWriter) error
+}
+
+type UpdateBusinessStatus200JSONResponse Stall
+
+func (response UpdateBusinessStatus200JSONResponse) VisitUpdateBusinessStatusResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateBusinessStatus400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response UpdateBusinessStatus400JSONResponse) VisitUpdateBusinessStatusResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateBusinessStatus404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response UpdateBusinessStatus404JSONResponse) VisitUpdateBusinessStatusResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateBusinessStatus500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response UpdateBusinessStatus500JSONResponse) VisitUpdateBusinessStatusResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListStallTicketsRequestObject struct {
+	StallId StallId `json:"stallId"`
+	Params  ListStallTicketsParams
+}
+
+type ListStallTicketsResponseObject interface {
+	VisitListStallTicketsResponse(w http.ResponseWriter) error
+}
+
+type ListStallTickets200JSONResponse []Ticket
+
+func (response ListStallTickets200JSONResponse) VisitListStallTicketsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListStallTickets400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response ListStallTickets400JSONResponse) VisitListStallTicketsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListStallTickets404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response ListStallTickets404JSONResponse) VisitListStallTicketsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListStallTickets500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response ListStallTickets500JSONResponse) VisitListStallTicketsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateTicketRequestObject struct {
+	StallId StallId `json:"stallId"`
+	Body    *CreateTicketJSONRequestBody
+}
+
+type CreateTicketResponseObject interface {
+	VisitCreateTicketResponse(w http.ResponseWriter) error
+}
+
+type CreateTicket201JSONResponse Ticket
+
+func (response CreateTicket201JSONResponse) VisitCreateTicketResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateTicket400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response CreateTicket400JSONResponse) VisitCreateTicketResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateTicket404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response CreateTicket404JSONResponse) VisitCreateTicketResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateTicket409JSONResponse struct{ ConflictJSONResponse }
+
+func (response CreateTicket409JSONResponse) VisitCreateTicketResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateTicket500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response CreateTicket500JSONResponse) VisitCreateTicketResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetTicketRequestObject struct {
+	PublicToken string `json:"publicToken"`
+}
+
+type GetTicketResponseObject interface {
+	VisitGetTicketResponse(w http.ResponseWriter) error
+}
+
+type GetTicket200JSONResponse TicketDetail
+
+func (response GetTicket200JSONResponse) VisitGetTicketResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetTicket404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response GetTicket404JSONResponse) VisitGetTicketResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetTicket500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response GetTicket500JSONResponse) VisitGetTicketResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateTicketStatusRequestObject struct {
+	TicketId int64 `json:"ticketId"`
+	Body     *UpdateTicketStatusJSONRequestBody
+}
+
+type UpdateTicketStatusResponseObject interface {
+	VisitUpdateTicketStatusResponse(w http.ResponseWriter) error
+}
+
+type UpdateTicketStatus200JSONResponse Ticket
+
+func (response UpdateTicketStatus200JSONResponse) VisitUpdateTicketStatusResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateTicketStatus400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response UpdateTicketStatus400JSONResponse) VisitUpdateTicketStatusResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateTicketStatus404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response UpdateTicketStatus404JSONResponse) VisitUpdateTicketStatusResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateTicketStatus500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response UpdateTicketStatus500JSONResponse) VisitUpdateTicketStatusResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 // StrictServerInterface represents all server handlers.
 type StrictServerInterface interface {
 	// GetHealth サーバーが動いているかを確認する
 	// (GET /health)
 	GetHealth(ctx context.Context, request GetHealthRequestObject) (GetHealthResponseObject, error)
+	// ListStalls 全ての屋台の混雑度・営業状況・HP リンクを取得する（マップ用）
+	// (GET /stalls)
+	ListStalls(ctx context.Context, request ListStallsRequestObject) (ListStallsResponseObject, error)
+	// GetStall 指定した ID の屋台を取得する（パスワード以外）
+	// (GET /stalls/{stallId})
+	GetStall(ctx context.Context, request GetStallRequestObject) (GetStallResponseObject, error)
+	// UpdateBusinessStatus 指定した屋台の営業状況を変更する
+	// (PATCH /stalls/{stallId}/business-status)
+	UpdateBusinessStatus(ctx context.Context, request UpdateBusinessStatusRequestObject) (UpdateBusinessStatusResponseObject, error)
+	// ListStallTickets 指定した屋台の整理券の一覧を取得する
+	// (GET /stalls/{stallId}/tickets)
+	ListStallTickets(ctx context.Context, request ListStallTicketsRequestObject) (ListStallTicketsResponseObject, error)
+	// CreateTicket 整理券を発行する
+	// (POST /stalls/{stallId}/tickets)
+	CreateTicket(ctx context.Context, request CreateTicketRequestObject) (CreateTicketResponseObject, error)
+	// GetTicket 指定した整理券を取得する（前に何人を含む）
+	// (GET /tickets/{publicToken})
+	GetTicket(ctx context.Context, request GetTicketRequestObject) (GetTicketResponseObject, error)
+	// UpdateTicketStatus 指定した整理券の status を変更する
+	// (PATCH /tickets/{ticketId}/status)
+	UpdateTicketStatus(ctx context.Context, request UpdateTicketStatusRequestObject) (UpdateTicketStatusResponseObject, error)
 }
 
 type StrictHandlerFunc func(ctx echo.Context, request any) (any, error)
@@ -178,18 +1093,316 @@ func (sh *strictHandler) GetHealth(ctx echo.Context) error {
 	return nil
 }
 
+// ListStalls operation middleware
+func (sh *strictHandler) ListStalls(ctx echo.Context) error {
+	var request ListStallsRequestObject
+
+	handler := func(ctx echo.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.ListStalls(ctx.Request().Context(), request.(ListStallsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListStalls")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		return err
+	} else if validResponse, ok := response.(ListStallsResponseObject); ok {
+		return validResponse.VisitListStallsResponse(ctx.Response())
+	} else if response != nil {
+		return fmt.Errorf("unexpected response type: %T", response)
+	}
+	return nil
+}
+
+// GetStall operation middleware
+func (sh *strictHandler) GetStall(ctx echo.Context, stallId StallId) error {
+	var request GetStallRequestObject
+
+	request.StallId = stallId
+
+	handler := func(ctx echo.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.GetStall(ctx.Request().Context(), request.(GetStallRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetStall")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		return err
+	} else if validResponse, ok := response.(GetStallResponseObject); ok {
+		return validResponse.VisitGetStallResponse(ctx.Response())
+	} else if response != nil {
+		return fmt.Errorf("unexpected response type: %T", response)
+	}
+	return nil
+}
+
+// UpdateBusinessStatus operation middleware
+func (sh *strictHandler) UpdateBusinessStatus(ctx echo.Context, stallId StallId) error {
+	var request UpdateBusinessStatusRequestObject
+
+	request.StallId = stallId
+
+	var body UpdateBusinessStatusJSONRequestBody
+	var err error
+	if binder, ok := ctx.Echo().Binder.(*echo.DefaultBinder); ok {
+		// A request validator built on kin-openapi's openapi3filter with
+		// KeepValidatedValue leaves the value it validated on the body. Bind
+		// that value, matching member names exactly, so the handler receives
+		// what was validated instead of a second, case-insensitive decode.
+		// Otherwise bind only the request body, so that path and query
+		// parameters are not also bound into the body struct.
+		if vb, ok := ctx.Request().Body.(interface{ ValidatedValue() any }); !ok || runtime.BindJSONValue(vb.ValidatedValue(), &body) != nil {
+			err = binder.BindBody(ctx, &body)
+		}
+	} else {
+		// A custom binder is installed on the Echo instance; defer to it
+		// entirely, since echo.Binder does not expose body-only binding and
+		// the binder may do more than decode (for example call ctx.Validate).
+		err = ctx.Bind(&body)
+	}
+	if err != nil {
+		return err
+	}
+	request.Body = &body
+
+	handler := func(ctx echo.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.UpdateBusinessStatus(ctx.Request().Context(), request.(UpdateBusinessStatusRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UpdateBusinessStatus")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		return err
+	} else if validResponse, ok := response.(UpdateBusinessStatusResponseObject); ok {
+		return validResponse.VisitUpdateBusinessStatusResponse(ctx.Response())
+	} else if response != nil {
+		return fmt.Errorf("unexpected response type: %T", response)
+	}
+	return nil
+}
+
+// ListStallTickets operation middleware
+func (sh *strictHandler) ListStallTickets(ctx echo.Context, stallId StallId, params ListStallTicketsParams) error {
+	var request ListStallTicketsRequestObject
+
+	request.StallId = stallId
+	request.Params = params
+
+	handler := func(ctx echo.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.ListStallTickets(ctx.Request().Context(), request.(ListStallTicketsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListStallTickets")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		return err
+	} else if validResponse, ok := response.(ListStallTicketsResponseObject); ok {
+		return validResponse.VisitListStallTicketsResponse(ctx.Response())
+	} else if response != nil {
+		return fmt.Errorf("unexpected response type: %T", response)
+	}
+	return nil
+}
+
+// CreateTicket operation middleware
+func (sh *strictHandler) CreateTicket(ctx echo.Context, stallId StallId) error {
+	var request CreateTicketRequestObject
+
+	request.StallId = stallId
+
+	var body CreateTicketJSONRequestBody
+	var err error
+	if binder, ok := ctx.Echo().Binder.(*echo.DefaultBinder); ok {
+		// A request validator built on kin-openapi's openapi3filter with
+		// KeepValidatedValue leaves the value it validated on the body. Bind
+		// that value, matching member names exactly, so the handler receives
+		// what was validated instead of a second, case-insensitive decode.
+		// Otherwise bind only the request body, so that path and query
+		// parameters are not also bound into the body struct.
+		if vb, ok := ctx.Request().Body.(interface{ ValidatedValue() any }); !ok || runtime.BindJSONValue(vb.ValidatedValue(), &body) != nil {
+			err = binder.BindBody(ctx, &body)
+		}
+	} else {
+		// A custom binder is installed on the Echo instance; defer to it
+		// entirely, since echo.Binder does not expose body-only binding and
+		// the binder may do more than decode (for example call ctx.Validate).
+		err = ctx.Bind(&body)
+	}
+	if err != nil {
+		return err
+	}
+	request.Body = &body
+
+	handler := func(ctx echo.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.CreateTicket(ctx.Request().Context(), request.(CreateTicketRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CreateTicket")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		return err
+	} else if validResponse, ok := response.(CreateTicketResponseObject); ok {
+		return validResponse.VisitCreateTicketResponse(ctx.Response())
+	} else if response != nil {
+		return fmt.Errorf("unexpected response type: %T", response)
+	}
+	return nil
+}
+
+// GetTicket operation middleware
+func (sh *strictHandler) GetTicket(ctx echo.Context, publicToken string) error {
+	var request GetTicketRequestObject
+
+	request.PublicToken = publicToken
+
+	handler := func(ctx echo.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.GetTicket(ctx.Request().Context(), request.(GetTicketRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetTicket")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		return err
+	} else if validResponse, ok := response.(GetTicketResponseObject); ok {
+		return validResponse.VisitGetTicketResponse(ctx.Response())
+	} else if response != nil {
+		return fmt.Errorf("unexpected response type: %T", response)
+	}
+	return nil
+}
+
+// UpdateTicketStatus operation middleware
+func (sh *strictHandler) UpdateTicketStatus(ctx echo.Context, ticketId int64) error {
+	var request UpdateTicketStatusRequestObject
+
+	request.TicketId = ticketId
+
+	var body UpdateTicketStatusJSONRequestBody
+	var err error
+	if binder, ok := ctx.Echo().Binder.(*echo.DefaultBinder); ok {
+		// A request validator built on kin-openapi's openapi3filter with
+		// KeepValidatedValue leaves the value it validated on the body. Bind
+		// that value, matching member names exactly, so the handler receives
+		// what was validated instead of a second, case-insensitive decode.
+		// Otherwise bind only the request body, so that path and query
+		// parameters are not also bound into the body struct.
+		if vb, ok := ctx.Request().Body.(interface{ ValidatedValue() any }); !ok || runtime.BindJSONValue(vb.ValidatedValue(), &body) != nil {
+			err = binder.BindBody(ctx, &body)
+		}
+	} else {
+		// A custom binder is installed on the Echo instance; defer to it
+		// entirely, since echo.Binder does not expose body-only binding and
+		// the binder may do more than decode (for example call ctx.Validate).
+		err = ctx.Bind(&body)
+	}
+	if err != nil {
+		return err
+	}
+	request.Body = &body
+
+	handler := func(ctx echo.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.UpdateTicketStatus(ctx.Request().Context(), request.(UpdateTicketStatusRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UpdateTicketStatus")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		return err
+	} else if validResponse, ok := response.(UpdateTicketStatusResponseObject); ok {
+		return validResponse.VisitUpdateTicketStatusResponse(ctx.Response())
+	} else if response != nil {
+		return fmt.Errorf("unexpected response type: %T", response)
+	}
+	return nil
+}
+
 // Base64 encoded, compressed with deflate, json marshaled OpenAPI spec.
 // Stored as a slice of fixed-width chunks rather than one concatenated
 // const string: with thousands of chunks the chained `+` fold is several
 // times slower for the Go compiler than parsing a slice literal.
 var swaggerSpec = []string{
-	"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",
+	"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",
 }
 
 // decodeSpec returns the embedded OpenAPI spec as raw JSON bytes,

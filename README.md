@@ -163,6 +163,8 @@ docker compose up --build
 | `TURSO_DATABASE_URL` | DB の URL（`libsql://...`、手元で試すときは `file:local.db`） | なし | Turso の DB の URL |
 | `TURSO_AUTH_TOKEN` | Turso の接続トークン（`file:` のときは空） | なし | `turso db tokens create` で発行したもの |
 | `PORT` | API サーバーのポート | `8080` | `8080` |
+| `STATIC_DIR` | FE のビルド結果（`frontend/out/`）の場所。設定すると `/api` 以外の URL で FE のページを返す | なし（API だけ動かす） | 空（`next dev` を使う） |
+| `CORS_ALLOW_ORIGINS` | 別のオリジンから API を呼ぶことを許可する（カンマ区切り）。本番は同じオリジンなので空 | なし | `http://localhost:3000` |
 
 `backend/.env.example` を `backend/.env` にコピーして値を埋めてください。
 
@@ -172,7 +174,8 @@ DB の接続情報などの秘密情報は `.env` に書き、Git には上げ�
 
 | コマンド（`backend/` で実行） | 実行する処理 |
 | -------- | ------------ |
-| `go run ./cmd/server` | API サーバーを起動する（ポートは環境変数 `PORT`、なければ 8080）。`http://localhost:8080/api/health` で `{"status":"ok"}` が返れば OK |
+| `set -a && . ./.env && set +a && go run ./cmd/server` | `.env` の環境変数を読み込んで API サーバーを起動する（ポートは `PORT`、なければ 8080）。起動時に DB のテーブルを作る（足りないものだけ足す）。`http://localhost:8080/api/health` で `{"status":"ok"}` が返れば OK |
+| `go test ./...` | テストを実行する（Turso の設定がなければ、手元の SQLite ファイルだけで試す） |
 | `go generate ./...` | `openapi/openapi.yaml` から `internal/gen/api.gen.go` を生成し直す |
 
 | コマンド（`frontend/` で実行） | 実行する処理 |
