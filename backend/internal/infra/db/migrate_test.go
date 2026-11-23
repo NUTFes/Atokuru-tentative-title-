@@ -17,7 +17,7 @@ func TestMigrate(t *testing.T) {
 		}
 	}
 
-	for _, table := range []string{"stalls", "tickets", "comment_templates"} {
+	for _, table := range []string{"stalls", "tickets", "comment_templates", "push_subscriptions"} {
 		if !gdb.Migrator().HasTable(table) {
 			t.Errorf("テーブル %s がありません", table)
 		}
@@ -35,5 +35,22 @@ func TestMigrate(t *testing.T) {
 		if !has[want] {
 			t.Errorf("インデックス %s がありません（あるもの: %v）", want, indexes)
 		}
+	}
+}
+
+// 購読のテーブルに (ticket_id, endpoint) のユニークがあり、tickets に near_notified_at の列があるかを確かめる。
+func TestMigrate_PushSubscriptions(t *testing.T) {
+	gdb, err := Open("file:"+filepath.Join(t.TempDir(), "test.db"), "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := Migrate(gdb); err != nil {
+		t.Fatal(err)
+	}
+	if !gdb.Migrator().HasIndex("push_subscriptions", "idx_push_subscriptions_ticket_endpoint") {
+		t.Error("インデックス idx_push_subscriptions_ticket_endpoint がありません")
+	}
+	if !gdb.Migrator().HasColumn("tickets", "near_notified_at") {
+		t.Error("tickets に near_notified_at の列がありません")
 	}
 }
