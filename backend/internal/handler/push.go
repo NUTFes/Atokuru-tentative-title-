@@ -2,19 +2,33 @@ package handler
 
 import (
 	"context"
-	"net/http"
 
-	"github.com/labstack/echo/v4"
-
+	"github.com/NUTFes/Atokuru-tentative-title-/backend/internal/domain"
 	"github.com/NUTFes/Atokuru-tentative-title-/backend/internal/gen"
+	"github.com/NUTFes/Atokuru-tentative-title-/backend/internal/usecase"
 )
 
-// GetVapidPublicKey は GET /push/vapid-public-key。#60 で実装する。
+// GetVapidPublicKey は GET /push/vapid-public-key。
 func (h *Handler) GetVapidPublicKey(ctx context.Context, req gen.GetVapidPublicKeyRequestObject) (gen.GetVapidPublicKeyResponseObject, error) {
-	return nil, echo.NewHTTPError(http.StatusNotImplemented)
+	key, err := h.push.VapidPublicKey()
+	if err != nil {
+		return nil, err
+	}
+	return gen.GetVapidPublicKey200JSONResponse{PublicKey: key}, nil
 }
 
-// CreatePushSubscription は POST /tickets/{publicToken}/push-subscriptions。#60 で実装する。
+// CreatePushSubscription は POST /tickets/{publicToken}/push-subscriptions。
 func (h *Handler) CreatePushSubscription(ctx context.Context, req gen.CreatePushSubscriptionRequestObject) (gen.CreatePushSubscriptionResponseObject, error) {
-	return nil, echo.NewHTTPError(http.StatusNotImplemented)
+	if req.Body == nil {
+		return nil, domain.InvalidInput("購読の内容を指定してください")
+	}
+	err := h.push.Subscribe(ctx, req.PublicToken, usecase.SubscribeInput{
+		Endpoint: req.Body.Endpoint,
+		P256dh:   req.Body.Keys.P256dh,
+		Auth:     req.Body.Keys.Auth,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return gen.CreatePushSubscription204Response{}, nil
 }

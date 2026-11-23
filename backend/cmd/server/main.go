@@ -34,6 +34,8 @@ func main() {
 	ticketRepo := repository.NewTicketRepository(gdb)
 	stallUsecase := usecase.NewStallUsecase(stallRepo)
 	ticketUsecase := usecase.NewTicketUsecase(stallRepo, ticketRepo)
+	pushRepo := repository.NewPushSubscriptionRepository(gdb)
+	pushUsecase := usecase.NewPushUsecase(ticketRepo, pushRepo, vapidPublicKey())
 
 	e := echo.New()
 	e.HideBanner = true
@@ -42,7 +44,7 @@ func main() {
 	e.Use(middleware.Recover())
 
 	// API はすべて /api の下に置く（openapi.yaml の servers と合わせる）。
-	h := handler.New(stallUsecase, ticketUsecase)
+	h := handler.New(stallUsecase, ticketUsecase, pushUsecase)
 	gen.RegisterHandlersWithBaseURL(e, gen.NewStrictHandler(h, nil), "/api")
 
 	// /api 以外の URL では FE（Next.js の静的エクスポート）のファイルを返す。
@@ -75,4 +77,15 @@ func main() {
 	if err := e.Shutdown(shutdownCtx); err != nil {
 		e.Logger.Fatal(err)
 	}
+}
+
+// vapidPublicKey は、通知（Web Push）に使う VAPID の鍵が環境変数にそろっていれば公開鍵を返す。
+// 1つでも欠けていれば空を返し、通知を使わずに動かす（ローカル開発で鍵がなくても困らないように）。
+func vapidPublicKey() string {
+	pub := os.Getenv("VAPID_PUBLIC_KEY")
+	if pub == "" || os.Getenv("VAPID_PRIVATE_KEY") == "" || os.Getenv("VAPID_SUBJECT") == "" {
+		log.Print("VAPID_PUBLIC_KEY・VAPID_PRIVATE_KEY・VAPID_SUBJECT がそろっていないので、通知（Web Push）は使いません")
+		return ""
+	}
+	return pub
 }
