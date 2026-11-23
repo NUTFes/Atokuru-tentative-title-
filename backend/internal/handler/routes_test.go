@@ -35,7 +35,7 @@ func newTestServer(t *testing.T) (*echo.Echo, *gorm.DB) {
 	pushRepo := repository.NewPushSubscriptionRepository(gdb)
 	h := New(
 		usecase.NewStallUsecase(stallRepo),
-		usecase.NewTicketUsecase(stallRepo, ticketRepo),
+		usecase.NewTicketUsecase(stallRepo, ticketRepo, pushRepo, nil),
 		usecase.NewPushUsecase(ticketRepo, pushRepo, testVapidPublicKey),
 	)
 

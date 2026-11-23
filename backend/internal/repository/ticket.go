@@ -131,3 +131,43 @@ func (r *TicketRepository) UpdateStatus(ctx context.Context, id uint, status dom
 	}
 	return r.FindByID(ctx, id)
 }
+
+// ClaimNearNotification は、その屋台で order_number が from〜to の調理中（waiting）の整理券のうち、
+// まだ「あと3人」の通知を送っていないものに near_notified_at を入れ、入れられた整理券を返す。
+//
+// 1件ずつ「near_notified_at が空なら入れる」で書き換えるので、受け取り済みが同時に2回あっても、
+// 同じ整理券を両方が返すことはない（通知が2回届かない）。
+// 範囲は「あと3人」になった数件だけなので、10万件あっても数行しか読まない。
+func (r *TicketRepository) ClaimNearNotification(ctx context.Context, stallID uint, from, to int, now time.Time) ([]domain.Ticket, error) {
+	if from > to {
+		return nil, nil
+	}
+	var candidates []domain.Ticket
+	if err := r.nearCandidatesQuery(ctx, stallID, from, to).Find(&candidates).Error; err != nil {
+		return nil, err
+	}
+	claimed := make([]domain.Ticket, 0, len(candidates))
+	for _, t := range candidates {
+		res := r.db.WithContext(ctx).Model(&domain.Ticket{}).
+			Where("id = ? AND near_notified_at IS NULL", t.ID).
+			Update("near_notified_at", now)
+		if res.Error != nil {
+			return claimed, res.Error
+		}
+		if res.RowsAffected == 1 {
+			t.NearNotifiedAt = &now
+			claimed = append(claimed, t)
+		}
+	}
+	return claimed, nil
+}
+
+// nearCandidatesQuery は ClaimNearNotification の候補を探すクエリを組み立てる（テストで EXPLAIN にかけるために分けている）。
+// ListByStall と同じく、(stall_id, status, order_number) のインデックスを使わせる。
+func (r *TicketRepository) nearCandidatesQuery(ctx context.Context, stallID uint, from, to int) *gorm.DB {
+	return r.db.WithContext(ctx).
+		Table("tickets INDEXED BY idx_tickets_stall_status_order").
+		Where("stall_id = ? AND status = ? AND order_number BETWEEN ? AND ? AND near_notified_at IS NULL",
+			stallID, string(domain.TicketStatusWaiting), from, to).
+		Order("order_number")
+}
