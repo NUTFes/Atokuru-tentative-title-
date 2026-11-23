@@ -64,11 +64,11 @@
 | -------------------- | ---------- |
 | Go                   | 1.26       |
 | Echo                 | v4.16      |
-| Node.js              | 未記入     |
-| Next.js              | 未記入     |
-| React                | 未記入     |
-| TypeScript           | 未記入     |
-| Tailwind CSS         | 未記入     |
+| Node.js              | 24（LTS）  |
+| Next.js              | 16.4       |
+| React                | 19.3       |
+| TypeScript           | 5.9        |
+| Tailwind CSS         | 4.3        |
 
 | 用途     | 使うもの                                   |
 | -------- | ------------------------------------------ |
@@ -134,11 +134,17 @@
 
 ### コンテナの作成と起動
 
-`.env` の作り方と、ローカルでまとめて起動するコマンドを書きます。
+Docker Desktop を入れて起動しておきます（WSL を使う人は、Docker Desktop の Settings → Resources → WSL integration で自分のディストリビューションを有効にします）。リポジトリのルートで次を実行します。
+
+```sh
+docker compose up --build
+```
+
+今はフロントエンドだけが起動します。バックエンドは #7 で追加します。
 
 ### 動作確認
 
-起動したあとに開く URL と、正しく動いているときの表示を書きます。
+ブラウザで http://localhost:3000 を開き、「アトクル」と表示されれば OK です。`frontend/src` のファイルを保存すると、画面に反映されます。
 
 ### 環境変数の一覧
 
@@ -161,6 +167,15 @@ DB の接続情報などの秘密情報は `.env` に書き、Git には上げ�
 | `set -a && . ./.env && set +a && go run ./cmd/server` | `.env` の環境変数を読み込んで API サーバーを起動する（ポートは `PORT`、なければ 8080）。起動時に DB のテーブルを作る（足りないものだけ足す）。`http://localhost:8080/api/health` で `{"status":"ok"}` が返れば OK |
 | `go test ./...` | テストを実行する（Turso の設定がなければ、手元の SQLite ファイルだけで試す） |
 | `go generate ./...` | `openapi/openapi.yaml` から `internal/gen/api.gen.go` を生成し直す |
+
+| コマンド（`frontend/` で実行） | 実行する処理 |
+| -------- | ------------ |
+| `npm install` | パッケージを入れる（Docker を使わずに動かすとき。Node.js 24 が必要） |
+| `npm run dev` | 開発サーバーを起動する（http://localhost:3000） |
+| `npm run build` | 静的エクスポートでビルドする。`frontend/out/` に HTML・CSS・JS ができる |
+| `npm run lint` | ESLint でチェックする |
+
+Docker でビルドだけを確かめるときは、`frontend/` で `docker build --target build .` を実行します。
 
 <p align="right">(<a href="#top">トップへ</a>)</p>
 
