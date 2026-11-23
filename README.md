@@ -167,6 +167,9 @@ docker compose up --build
 | `PORT` | API サーバーのポート | `8080` | `8080` |
 | `STATIC_DIR` | FE のビルド結果（`frontend/out/`）の場所。設定すると `/api` 以外の URL で FE のページを返す | なし（API だけ動かす） | 空（`next dev` を使う） |
 | `CORS_ALLOW_ORIGINS` | 別のオリジンから API を呼ぶことを許可する（カンマ区切り）。本番は同じオリジンなので空 | なし | `http://localhost:3000` |
+| `VAPID_PUBLIC_KEY` | 通知（Web Push）の VAPID 公開鍵。3つそろっていないと通知を使わずに動く | なし（通知を使わない） | 空 |
+| `VAPID_PRIVATE_KEY` | 通知の VAPID 秘密鍵。Git に上げない。作り直すとそれまでの購読が使えなくなる | なし | 空 |
+| `VAPID_SUBJECT` | 通知を送る人の連絡先（`mailto:` か `https:` の URL） | なし | 空 |
 | `NEXT_PUBLIC_API_BASE_URL` | FE から呼ぶ API の URL（`frontend/.env.local` に書く）。本番は同じオリジンなので空 | `/api` | `http://localhost:8080/api` |
 
 `backend/.env.example` を `backend/.env` にコピーして値を埋めてください。
