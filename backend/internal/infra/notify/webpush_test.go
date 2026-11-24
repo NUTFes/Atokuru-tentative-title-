@@ -49,7 +49,7 @@ func TestSend(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	w := newTestWebPush(t, "mailto:atokuru@example.com")
+	w := newTestWebPush(t, "mailto:t0m0kuru@example.com")
 	if err := w.Send(t.Context(), newSubscription(t, srv.URL+"/push"), []byte(`{"type":"ready"}`)); err != nil {
 		t.Fatal(err)
 	}
@@ -72,8 +72,8 @@ func TestSend(t *testing.T) {
 	if err := json.Unmarshal(claims, &c); err != nil {
 		t.Fatal(err)
 	}
-	if c.Sub != "mailto:atokuru@example.com" {
-		t.Errorf("sub = %q, want mailto:atokuru@example.com", c.Sub)
+	if c.Sub != "mailto:t0m0kuru@example.com" {
+		t.Errorf("sub = %q, want mailto:t0m0kuru@example.com", c.Sub)
 	}
 }
 

@@ -1,6 +1,7 @@
 // localStorage の読み書きはこのファイルだけで行う。
 // プライベートモードなどで localStorage が使えないときは、保存せずに続ける。
 
+// キーの "atokuru:" は、アプリの名前が t0m0kuru に変わる前のもの。変えると来場者が保存した整理券などが消えるので、そのままにする。
 const LOCALE_KEY = "atokuru:locale";
 
 function read(key: string): string | null {
