@@ -1,4 +1,4 @@
-// アトクルの Service Worker。
+// t0m0kuru の Service Worker。
 // 目的は Web Push の通知を受け取ること。
 // 古い画面が残る事故を避けるため、キャッシュはしない（fetch のハンドラを置かない）。
 // Echo から Cache-Control: no-cache で返るので、更新するとすぐに新しい sw.js が使われる。
@@ -66,7 +66,7 @@ self.addEventListener("push", (event) => {
   );
 });
 
-// 通知を押したら整理券の画面を開く。すでにアトクルを開いていれば、そのタブに移る
+// 通知を押したら整理券の画面を開く。すでに t0m0kuru を開いていれば、そのタブに移る
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
   const url = new URL(event.notification.data?.url || "/", self.location.origin).href;

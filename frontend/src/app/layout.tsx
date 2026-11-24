@@ -5,7 +5,7 @@ import { PwaSetup } from "@/app/pwa-setup";
 import { I18nProvider } from "@/lib/i18n";
 
 export const metadata: Metadata = {
-  title: "アトクル",
+  title: "t0m0kuru",
   description: "学園祭の模擬店の整理券アプリ",
   manifest: "/manifest.json",
   icons: {
@@ -14,7 +14,7 @@ export const metadata: Metadata = {
   },
   appleWebApp: {
     capable: true,
-    title: "アトクル",
+    title: "t0m0kuru",
     statusBarStyle: "default",
   },
 };
