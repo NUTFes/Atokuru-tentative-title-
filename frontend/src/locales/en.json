@@ -63,7 +63,9 @@
   "map": {
     "title": "Map",
     "waitingCount": "{count} waiting",
-    "homepage": "Visit stall page"
+    "homepage": "Visit stall page",
+    "imageAlt": "Map of the festival grounds showing where each stall is",
+    "imageHint": "Tap to open the map and zoom in"
   },
   "stall": {
     "login": {

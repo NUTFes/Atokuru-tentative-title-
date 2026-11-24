@@ -63,7 +63,9 @@
   "map": {
     "title": "マップ",
     "waitingCount": "待ち {count} 人",
-    "homepage": "お店のページを見る"
+    "homepage": "お店のページを見る",
+    "imageAlt": "会場の全体マップ。屋台の場所が書いてあります",
+    "imageHint": "押すと地図だけを開き、拡大して見られます"
   },
   "stall": {
     "login": {
