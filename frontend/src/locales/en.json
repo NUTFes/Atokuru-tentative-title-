@@ -48,7 +48,8 @@
     "receivedMessage": "Picked up",
     "note": "Note",
     "issuedAt": "Issued at",
-    "detail": "View details"
+    "detail": "View details",
+    "noteOriginal": "Original: {text}"
   },
   "home": {
     "title": "Tickets",

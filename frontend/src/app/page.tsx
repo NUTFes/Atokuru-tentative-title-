@@ -7,7 +7,7 @@ import { NotificationPrompt } from "@/components/ticket/notification-prompt";
 import { TicketCard } from "@/components/ticket/ticket-card";
 import { Button } from "@/components/ui/button";
 import { api, type TicketDetail } from "@/lib/api/client";
-import { useT } from "@/lib/i18n";
+import { type Locale, useT } from "@/lib/i18n";
 import {
   isPushSupported,
   notificationPermission,
@@ -78,8 +78,23 @@ async function registerPush(vapidPublicKey: string, tickets: TicketDetail[]): Pr
   }
 }
 
+/**
+ * 整理券のカードに出す備考を選ぶ。
+ * 今の言語が日本語以外で訳があれば訳を出し、元の日本語を添える。訳がなければ日本語のまま出す。
+ */
+function ticketNote(
+  ticket: TicketDetail,
+  locale: Locale,
+): { note?: string; noteOriginal?: string } {
+  if (ticket.comment === null) return {};
+  const translated = locale === "ja" ? undefined : ticket.comment_translations[locale];
+  return translated
+    ? { note: translated, noteOriginal: ticket.comment }
+    : { note: ticket.comment };
+}
+
 export default function Home() {
-  const { t } = useT();
+  const { t, locale } = useT();
   const [state, setState] = useState<LoadState>({ kind: "loading" });
   const [notice, setNotice] = useState<Notice>(null);
   // 通知：使えないときは null で、ボタンを出さない
@@ -190,6 +205,7 @@ export default function Home() {
                   orderNumber={ticket.order_number}
                   aheadCount={ticket.people_ahead}
                   status={ticket.status}
+                  {...ticketNote(ticket, locale)}
                 />
               </li>
             ))}
