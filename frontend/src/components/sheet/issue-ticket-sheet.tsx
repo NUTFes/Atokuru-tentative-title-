@@ -24,6 +24,8 @@ export type IssueTicketSheetProps = {
   onIssue: (note: string) => void;
   /** 発券中か（true のあいだはボタンを押せない） */
   issuing?: boolean;
+  /** 備考の定型文。押すと備考の欄をその文に置き換える。0件ならボタンの並びを出さない */
+  templates?: string[];
 };
 
 /** 店舗画面で整理券を発行するボトムシート。見た目だけを担当する */
@@ -32,6 +34,7 @@ export function IssueTicketSheet({
   onOpenChange,
   onIssue,
   issuing = false,
+  templates = [],
 }: IssueTicketSheetProps) {
   const { t } = useT();
   const s = t.stall.issueSheet;
@@ -61,6 +64,26 @@ export function IssueTicketSheet({
             placeholder={s.notePlaceholder}
             onChange={(e) => setNote(e.target.value)}
           />
+          {templates.length > 0 && (
+            <div className="flex flex-col gap-1.5 pt-1">
+              <p className="text-muted-foreground text-xs">{s.templates}</p>
+              <div className="flex flex-wrap gap-2">
+                {templates.map((template) => (
+                  <Button
+                    key={template}
+                    type="button"
+                    variant={note === template ? "default" : "outline"}
+                    size="sm"
+                    aria-pressed={note === template}
+                    // 足さずに置き換える。訳は備考が定型文とまったく同じときだけ付くため
+                    onClick={() => setNote(template)}
+                  >
+                    {template}
+                  </Button>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
         <DrawerFooter>
           <Button
