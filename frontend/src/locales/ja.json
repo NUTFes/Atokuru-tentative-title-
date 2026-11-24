@@ -64,7 +64,9 @@
   "map": {
     "title": "マップ",
     "waitingCount": "待ち {count} 人",
-    "homepage": "お店のページを見る"
+    "homepage": "お店のページを見る",
+    "venueAlt": "学園祭の会場の全体マップ。屋台や建物の場所が描かれています",
+    "zoomHint": "タップすると画像だけを開いて拡大できます"
   },
   "stall": {
     "login": {
