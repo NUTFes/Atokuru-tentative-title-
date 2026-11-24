@@ -3,6 +3,7 @@
 import { useCallback, useState } from "react";
 
 import { StallListItem } from "@/components/map/stall-list-item";
+import { VenueMap } from "@/components/map/venue-map";
 import { UserBottomNav } from "@/components/nav/user-bottom-nav";
 import { Button } from "@/components/ui/button";
 import { api, type StallSummary } from "@/lib/api/client";
@@ -34,6 +35,8 @@ export default function MapPage() {
   return (
     <main className="mx-auto flex min-h-svh max-w-md flex-col gap-4 p-4 pb-24">
       <h1 className="text-2xl font-bold">{t.map.title}</h1>
+
+      <VenueMap src="/map.png" alt={t.map.venueAlt} width={1200} height={864} hint={t.map.zoomHint} />
 
       {state.kind === "loading" && <p className="text-muted-foreground">{t.common.loading}</p>}
 
