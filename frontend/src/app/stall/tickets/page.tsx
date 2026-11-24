@@ -30,6 +30,7 @@ export default function StallTicketsPage() {
   const [sheetOpen, setSheetOpen] = useState(false);
   const [issuing, setIssuing] = useState(false);
   const [issued, setIssued] = useState<Ticket | null>(null);
+  const [templates, setTemplates] = useState<string[]>([]);
 
   const load = useCallback(async () => {
     if (stallId === null) return;
@@ -45,8 +46,22 @@ export default function StallTicketsPage() {
     }
   }, [stallId]);
 
+  // 発券のシートに出す備考の定型文。取れなくても発券はできるので、エラーは出さない
+  const loadTemplates = useCallback(async () => {
+    if (stallId === null) return;
+    try {
+      const { data } = await api.GET("/stalls/{stallId}/comment-templates", {
+        params: { path: { stallId } },
+      });
+      if (data) setTemplates(data.map((template) => template.comment));
+    } catch (e) {
+      console.error(e);
+    }
+  }, [stallId]);
+
   // ページを開いたとき（ログイン中の店の ID を読んだあと）と、アプリに戻ってきたときに取り直す
   useOnVisible(load);
+  useOnVisible(loadTemplates);
 
   const issue = async (note: string) => {
     if (stallId === null) return;
@@ -159,6 +174,7 @@ export default function StallTicketsPage() {
         onOpenChange={setSheetOpen}
         onIssue={(note) => void issue(note)}
         issuing={issuing}
+        templates={templates}
       />
       {issued && (
         <IssuedTicketModal

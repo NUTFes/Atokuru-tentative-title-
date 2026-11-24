@@ -91,7 +91,8 @@
       "notePlaceholder": "e.g. Large, 2 pcs",
       "submit": "Issue",
       "description": "Add a note if needed",
-      "submitting": "Issuing…"
+      "submitting": "Issuing…",
+      "templates": "Templates (tap to use as the note)"
     },
     "issuedModal": {
       "title": "Ticket issued",
@@ -114,6 +115,15 @@
       "logout": "Log out",
       "logoutConfirm": "Log out?",
       "account": "Account"
+    },
+    "templates": {
+      "title": "Note templates",
+      "description": "Register notes you use often to add them with one tap when issuing a ticket. Notes from templates are shown translated to visitors",
+      "placeholder": "e.g. Yakisoba, large",
+      "add": "Add",
+      "delete": "Delete",
+      "empty": "No templates yet",
+      "conflict": "This template already exists, or you have reached the limit (30)"
     }
   },
   "language": {
