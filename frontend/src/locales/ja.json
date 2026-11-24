@@ -48,7 +48,8 @@
     "receivedMessage": "受け取りが完了しました",
     "note": "備考",
     "issuedAt": "発行時刻",
-    "detail": "詳細を見る"
+    "detail": "詳細を見る",
+    "noteOriginal": "原文：{text}"
   },
   "home": {
     "title": "整理券",
@@ -93,7 +94,8 @@
       "notePlaceholder": "例：大盛り、2個",
       "submit": "発行する",
       "description": "必要なら備考を入力してください",
-      "submitting": "発行中…"
+      "submitting": "発行中…",
+      "templates": "定型文（押すと備考に入ります）"
     },
     "issuedModal": {
       "title": "整理券を発行しました",
@@ -115,7 +117,18 @@
       "language": "言語",
       "logout": "ログアウト",
       "logoutConfirm": "ログアウトしますか？",
-      "account": "アカウント"
+      "account": "アカウント",
+      "templates": {
+        "title": "備考の定型文",
+        "description": "よく使う備考を登録すると、発券のときにワンタップで入れられます。定型文のまま発券すると、来場者の画面に英語の訳が出ます",
+        "placeholder": "例：焼きそば 大盛り",
+        "add": "追加",
+        "adding": "登録中…",
+        "delete": "削除",
+        "deleteLabel": "「{comment}」を削除",
+        "empty": "定型文はまだありません",
+        "translation": "英語：{text}"
+      }
     }
   },
   "language": {

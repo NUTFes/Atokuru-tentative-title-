@@ -16,3 +16,4 @@ export type StallSummary = Schemas["StallSummary"];
 export type Ticket = Schemas["Ticket"];
 export type TicketDetail = Schemas["TicketDetail"];
 export type ApiError = Schemas["Error"];
+export type CommentTemplate = Schemas["CommentTemplate"];

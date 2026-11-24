@@ -48,7 +48,8 @@
     "receivedMessage": "Picked up",
     "note": "Note",
     "issuedAt": "Issued at",
-    "detail": "View details"
+    "detail": "View details",
+    "noteOriginal": "Original: {text}"
   },
   "home": {
     "title": "Tickets",
@@ -93,7 +94,8 @@
       "notePlaceholder": "e.g. Large, 2 pcs",
       "submit": "Issue",
       "description": "Add a note if needed",
-      "submitting": "Issuing…"
+      "submitting": "Issuing…",
+      "templates": "Templates (tap to use as the note)"
     },
     "issuedModal": {
       "title": "Ticket issued",
@@ -115,7 +117,18 @@
       "language": "Language",
       "logout": "Log out",
       "logoutConfirm": "Log out?",
-      "account": "Account"
+      "account": "Account",
+      "templates": {
+        "title": "Note templates",
+        "description": "Save notes you use often and add them with one tap when issuing a ticket. If you issue a ticket with a template as is, visitors see a translation",
+        "placeholder": "e.g. Yakisoba, large",
+        "add": "Add",
+        "adding": "Saving…",
+        "delete": "Delete",
+        "deleteLabel": "Delete \"{comment}\"",
+        "empty": "No templates yet",
+        "translation": "English: {text}"
+      }
     }
   },
   "language": {
