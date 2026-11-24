@@ -23,6 +23,10 @@ export type TicketCardProps = {
   aheadCount?: number;
   /** 整理券の状態 */
   status: TicketStatus;
+  /** 備考（メニューなど）。訳があれば訳を渡す。なければ省略し、備考の欄を出さない */
+  note?: string;
+  /** note に訳を渡したときの元の日本語。店で見せて確かめられるように小さく添える */
+  noteOriginal?: string;
   /** ボタンを押したときの処理。渡さなければボタンを出さない */
   onAction?: () => void;
 };
@@ -42,6 +46,8 @@ export function TicketCard({
   orderNumber,
   aheadCount = 0,
   status,
+  note,
+  noteOriginal,
   onAction,
 }: TicketCardProps) {
   const { t } = useT();
@@ -65,6 +71,19 @@ export function TicketCard({
           {status === "received" && t.ticket.receivedMessage}
         </p>
       </CardContent>
+      {note && (
+        <CardContent>
+          <div className="bg-muted rounded-lg px-3 py-2">
+            <p className="text-muted-foreground text-xs">{t.ticket.note}</p>
+            <p className="break-words">{note}</p>
+            {noteOriginal && (
+              <p lang="ja" className="text-muted-foreground text-xs break-words">
+                {format(t.ticket.noteOriginal, { text: noteOriginal })}
+              </p>
+            )}
+          </div>
+        </CardContent>
+      )}
       {onAction && (
         <CardFooter>
           <Button variant="outline" className="w-full" onClick={onAction}>

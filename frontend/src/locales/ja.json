@@ -48,7 +48,8 @@
     "receivedMessage": "受け取りが完了しました",
     "note": "備考",
     "issuedAt": "発行時刻",
-    "detail": "詳細を見る"
+    "detail": "詳細を見る",
+    "noteOriginal": "原文：{text}"
   },
   "home": {
     "title": "整理券",
