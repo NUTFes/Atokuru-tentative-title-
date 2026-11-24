@@ -25,6 +25,8 @@ export type TicketCardProps = {
   status: TicketStatus;
   /** ボタンを押したときの処理。渡さなければボタンを出さない */
   onAction?: () => void;
+  /** 備考（メニューなど）。訳があれば訳したものを渡す。なければ表示しない */
+  note?: string | null;
 };
 
 const badgeVariant = {
@@ -43,6 +45,7 @@ export function TicketCard({
   aheadCount = 0,
   status,
   onAction,
+  note,
 }: TicketCardProps) {
   const { t } = useT();
 
@@ -65,6 +68,12 @@ export function TicketCard({
           {status === "received" && t.ticket.receivedMessage}
         </p>
       </CardContent>
+      {note && (
+        <CardContent className="text-sm">
+          <span className="text-muted-foreground mr-2 text-xs">{t.ticket.note}</span>
+          <span className="break-words">{note}</span>
+        </CardContent>
+      )}
       {onAction && (
         <CardFooter>
           <Button variant="outline" className="w-full" onClick={onAction}>

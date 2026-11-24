@@ -78,8 +78,16 @@ async function registerPush(vapidPublicKey: string, tickets: TicketDetail[]): Pr
   }
 }
 
+/**
+ * 来場者に見せる備考。端末の言語の訳があれば訳を、なければ店が入れた備考をそのまま出す。
+ * 訳は定型文で発券したときだけ BE が付ける（自由入力の備考は訳さない）。
+ */
+function ticketNote(ticket: TicketDetail, locale: string): string | null {
+  return ticket.comment_translations[locale] ?? ticket.comment;
+}
+
 export default function Home() {
-  const { t } = useT();
+  const { t, locale } = useT();
   const [state, setState] = useState<LoadState>({ kind: "loading" });
   const [notice, setNotice] = useState<Notice>(null);
   // 通知：使えないときは null で、ボタンを出さない
@@ -190,6 +198,7 @@ export default function Home() {
                   orderNumber={ticket.order_number}
                   aheadCount={ticket.people_ahead}
                   status={ticket.status}
+                  note={ticketNote(ticket, locale)}
                 />
               </li>
             ))}
